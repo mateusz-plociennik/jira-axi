@@ -36,7 +36,9 @@ export function custom(as: string, fn: (item: Row) => unknown): FieldDef {
 }
 
 function outputKeyOf(def: FieldDef): string {
-  return def.as ?? ("key" in def ? def.key : def.as);
+  if (def.as) return def.as;
+  if ("key" in def) return def.key;
+  throw new Error(`field definition of type "${def.type}" needs an output name`);
 }
 
 export function extract(item: Row, schema: FieldDef[]): Row {
