@@ -24,9 +24,9 @@ Agents using `jira` directly have trouble because:
 ## Installation
 
 ```sh
-npm install -g @kunchenguid/jira-axi
+npm install -g @mateusz-plociennik/jira-axi
 # or
-npx @kunchenguid/jira-axi issue list
+npx @mateusz-plociennik/jira-axi issue list
 ```
 
 ## Usage
