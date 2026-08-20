@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { AxiError, jiraNotInstalledError, jiraTimeoutError, mapJiraError } from "./errors.js";
 
 /** Context resolved from global flags, appended to every child `jira` invocation. */
@@ -48,11 +48,33 @@ export function buildArgs(args: string[], ctx?: JiraContext): string[] {
   return out;
 }
 
+function killTree(child: ChildProcess): void {
+  // Kill the whole process group when possible so a pager or editor spawned by
+  // jira-cli cannot keep our stdio pipes — and therefore the Node event loop —
+  // alive after the timeout has already been reported.
+  try {
+    if (process.platform !== "win32" && typeof child.pid === "number") {
+      process.kill(-child.pid, "SIGKILL");
+    } else {
+      child.kill("SIGKILL");
+    }
+  } catch {
+    child.kill("SIGKILL");
+  }
+  child.stdin?.destroy();
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.unref();
+}
+
 function run(args: string[], input?: string): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
     const child = spawn("jira", args, {
       env: childEnv(),
       stdio: ["pipe", "pipe", "pipe"],
+      // A new process group on POSIX so a timeout can take down `jira` and
+      // anything it spawned (a pager, an editor) instead of leaking it.
+      detached: process.platform !== "win32",
     });
 
     let stdout = "";
@@ -63,7 +85,7 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      child.kill("SIGKILL");
+      killTree(child);
       reject(jiraTimeoutError(Math.round(timeoutMs() / 1000)));
     }, timeoutMs());
 
