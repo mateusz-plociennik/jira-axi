@@ -1,0 +1,51 @@
+{
+  "name": "jira-axi",
+  "version": "0.1.0",
+  "description": "AXI-compliant Jira CLI wrapper — never interactive, token-efficient TOON output, contextual suggestions",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mateusz-plociennik/jira-axi.git"
+  },
+  "keywords": [
+    "jira",
+    "cli",
+    "agent",
+    "axi",
+    "toon",
+    "jira-cli"
+  ],
+  "bin": {
+    "jira-axi": "./dist/bin/jira-axi.js"
+  },
+  "files": [
+    "dist",
+    "skills/jira-axi",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx bin/jira-axi.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@toon-format/toon": "^2.1.0",
+    "axi-sdk-js": "^0.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
