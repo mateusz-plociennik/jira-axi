@@ -8,8 +8,8 @@ user-invocable: false
 
 Agent ergonomic wrapper around Jira CLI. Prefer this over `jira` and other methods for Jira operations.
 
-You do not need jira-axi installed globally — invoke it with `npx -y jira-axi <command>`.
-If jira-axi output shows a follow-up command starting with `jira-axi`, run it as `npx -y jira-axi ...` instead.
+You do not need jira-axi installed globally — invoke it with `npx -y @mateusz-plociennik/jira-axi <command>`.
+If jira-axi output shows a follow-up command starting with `jira-axi`, run it as `npx -y @mateusz-plociennik/jira-axi ...` instead.
 
 jira-axi requires [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once by a human (`jira init`), plus a `JIRA_API_TOKEN` in the environment.
 `jira init` is an interactive wizard: if jira-axi reports `CONFIG_MISSING` or `AUTH_REQUIRED`, ask the user to run it — do not try to automate it.
@@ -21,9 +21,9 @@ jira-axi removes all of it. Every call passes `--no-input`/`--plain`, pins the p
 
 ## Workflow
 
-1. Run `npx -y jira-axi` with no arguments for a dashboard: the authenticated account, issues assigned to it, and issues updated in the last 7 days.
+1. Run `npx -y @mateusz-plociennik/jira-axi` with no arguments for a dashboard: the authenticated account, issues assigned to it, and issues updated in the last 7 days.
 2. Drill in command-first: `issue list`, `issue view <KEY>`, `sprint list --current`, `epic list <EPIC-KEY>`.
-3. Target another project or config file by placing `--project <KEY>` / `-p <KEY>` or `--config <path>` AFTER the command, e.g. `npx -y jira-axi issue list --project OTHER`.
+3. Target another project or config file by placing `--project <KEY>` / `-p <KEY>` or `--config <path>` AFTER the command, e.g. `npx -y @mateusz-plociennik/jira-axi issue list --project OTHER`.
 4. Mutate with explicit values: `issue move <KEY> "In Progress"`, `issue assign <KEY> me`, `issue comment add <KEY> "..."`.
 5. Every response ends with contextual next-step hints under `help:` — follow them.
 
@@ -36,24 +36,24 @@ commands[10]:
 
 Installed copies also inherit the SDK built-in `update` command.
 
-Run `npx -y jira-axi --help` for global flags, or `npx -y jira-axi <command> --help` for per-command usage.
+Run `npx -y @mateusz-plociennik/jira-axi --help` for global flags, or `npx -y @mateusz-plociennik/jira-axi <command> --help` for per-command usage.
 
 ## Examples
 
 ```sh
-npx -y jira-axi                                              # dashboard
-npx -y jira-axi issue list --assignee me --status "In Progress"
-npx -y jira-axi issue list --jql "sprint in openSprints() AND priority = High"
-npx -y jira-axi issue list "checkout timeout" --limit 10     # free-text search
-npx -y jira-axi issue view PROJ-42 --comments 5
-npx -y jira-axi issue create --type Bug --summary "Login fails" --body-file /tmp/body.md
-npx -y jira-axi issue move PROJ-42 Done --resolution Fixed
-npx -y jira-axi issue assign PROJ-42 me                      # `x` unassigns
-npx -y jira-axi issue comment add PROJ-42 "Deployed to staging"
-npx -y jira-axi issue worklog add PROJ-42 "2h 30m" --comment "pairing"
-npx -y jira-axi epic list                                    # epics; add <EPIC-KEY> for its issues
-npx -y jira-axi sprint list --current
-npx -y jira-axi open PROJ-42                                 # prints the URL, opens nothing
+npx -y @mateusz-plociennik/jira-axi                                              # dashboard
+npx -y @mateusz-plociennik/jira-axi issue list --assignee me --status "In Progress"
+npx -y @mateusz-plociennik/jira-axi issue list --jql "sprint in openSprints() AND priority = High"
+npx -y @mateusz-plociennik/jira-axi issue list "checkout timeout" --limit 10     # free-text search
+npx -y @mateusz-plociennik/jira-axi issue view PROJ-42 --comments 5
+npx -y @mateusz-plociennik/jira-axi issue create --type Bug --summary "Login fails" --body-file /tmp/body.md
+npx -y @mateusz-plociennik/jira-axi issue move PROJ-42 Done --resolution Fixed
+npx -y @mateusz-plociennik/jira-axi issue assign PROJ-42 me                      # `x` unassigns
+npx -y @mateusz-plociennik/jira-axi issue comment add PROJ-42 "Deployed to staging"
+npx -y @mateusz-plociennik/jira-axi issue worklog add PROJ-42 "2h 30m" --comment "pairing"
+npx -y @mateusz-plociennik/jira-axi epic list                                    # epics; add <EPIC-KEY> for its issues
+npx -y @mateusz-plociennik/jira-axi sprint list --current
+npx -y @mateusz-plociennik/jira-axi open PROJ-42                                 # prints the URL, opens nothing
 ```
 
 ## Tips

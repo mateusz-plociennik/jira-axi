@@ -33,8 +33,8 @@ jira-axi makes every one of those paths deterministic:
 ## Quick start
 
 ```sh
-npx -y jira-axi                 # dashboard — no args needed
-npx -y jira-axi issue list --assignee me --status "In Progress"
+npx -y @mateusz-plociennik/jira-axi                 # dashboard — no args needed
+npx -y @mateusz-plociennik/jira-axi issue list --assignee me --status "In Progress"
 ```
 
 Install the skill for agents that support [Agent Skills](https://agentskills.io):
@@ -46,7 +46,7 @@ npx skills add mateusz-plociennik/jira-axi --skill jira-axi -g
 Or install the CLI globally:
 
 ```sh
-npm install -g jira-axi
+npm install -g @mateusz-plociennik/jira-axi
 jira-axi setup hooks            # optional SessionStart hooks for Claude Code, Codex, OpenCode
 ```
 

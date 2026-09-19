@@ -1,5 +1,5 @@
 {
-  "name": "jira-axi",
+  "name": "@mateusz-plociennik/jira-axi",
   "version": "0.1.0",
   "description": "AXI-compliant Jira CLI wrapper — never interactive, token-efficient TOON output, contextual suggestions",
   "type": "module",
