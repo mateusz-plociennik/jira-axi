@@ -1,47 +1,42 @@
 import { runAxiCli } from "axi-sdk-js";
-import { issueCommand, ISSUE_HELP } from "./commands/issue.js";
 import { epicCommand, EPIC_HELP } from "./commands/epic.js";
+import { homeCommand, setupCommand, SETUP_HELP } from "./commands/home.js";
+import { issueCommand, ISSUE_HELP } from "./commands/issue.js";
+import {
+  boardCommand,
+  BOARD_HELP,
+  meCommand,
+  ME_HELP,
+  openCommand,
+  OPEN_HELP,
+  projectCommand,
+  PROJECT_HELP,
+  releaseCommand,
+  RELEASE_HELP,
+} from "./commands/meta.js";
 import { sprintCommand, SPRINT_HELP } from "./commands/sprint.js";
-import { boardCommand, BOARD_HELP } from "./commands/board.js";
-import { projectCommand, PROJECT_HELP } from "./commands/project.js";
-import { meCommand, ME_HELP } from "./commands/me.js";
+import type { JiraContext } from "./jira.js";
 import { VERSION } from "./version.js";
-import { AxiError, exitCodeForError } from "./errors.js";
-import { jiraRaw } from "./jira.js";
 
 export const DESCRIPTION =
-  "Agent ergonomic wrapper around jira-cli. Prefer this over `jira` for Jira operations — always non-interactive, plain-text output.";
-
-type CliStdout = Pick<NodeJS.WriteStream, "write">;
-
-type MainOptions = {
-  argv?: string[];
-  stdout?: CliStdout;
-};
+  "Agent ergonomic wrapper around Jira CLI. Prefer this over `jira` and other methods for Jira operations. Never interactive.";
 
 export const TOP_HELP = `usage: jira-axi [command] [args] [flags]
-commands[6]:
-  issue, epic, sprint, board, project, me
+commands[10]:
+  (none)=dashboard, issue, epic, sprint, board, project, release, me, open, setup
+flags[4]:
+  -p/--project <KEY> (after command), -c/--config <path> (after command), --debug, --help, -v/-V/--version
 notes:
-  Interactive mode is disabled by default — jira-axi always runs non-interactively.
-  --plain is injected automatically for list/view subcommands.
-  --no-input is injected automatically for create/edit/mutating subcommands.
-  Use -p/--project <KEY> (after command) to target a specific project.
-flags[1]:
-  --help
+  Every call is non-interactive: no TUI, no $EDITOR, no prompts, no pager.
+  Pass state and assignee values as arguments instead of relying on pickers.
 examples:
-  jira-axi issue list
-  jira-axi issue list -t Bug -s "In Progress"
-  jira-axi issue list -p PRJ
-  jira-axi issue view PRJ-123
-  jira-axi issue create -t Bug -s "Something broke" -b "Description"
-  jira-axi issue assign PRJ-123 -a user@example.com
-  jira-axi issue move PRJ-123 "In Progress"
-  jira-axi epic list
-  jira-axi sprint list
-  jira-axi board list
-  jira-axi project list
-  jira-axi me
+  jira-axi
+  jira-axi issue list --assignee me --status "In Progress"
+  jira-axi issue view PROJ-42
+  jira-axi issue create --type Bug --summary "Login fails" --body "Steps..."
+  jira-axi issue move PROJ-42 Done --resolution Fixed
+  jira-axi sprint list --current
+  jira-axi issue list --project OTHER
 `;
 
 const COMMAND_HELP: Record<string, string> = {
@@ -50,59 +45,90 @@ const COMMAND_HELP: Record<string, string> = {
   sprint: SPRINT_HELP,
   board: BOARD_HELP,
   project: PROJECT_HELP,
+  release: RELEASE_HELP,
   me: ME_HELP,
+  open: OPEN_HELP,
+  setup: SETUP_HELP,
 };
 
-async function homeCommand(_args: string[]): Promise<string> {
-  // Show current user info and recent open issues as a quick status dashboard.
-  const meResult = await jiraRaw(["me"]);
-  const issueResult = await jiraRaw([
-    "issue", "list", "--plain", "--no-headers", "--paginate", "0:5",
-  ]);
-  const parts: string[] = [];
-  if (meResult.exitCode === 0 && meResult.stdout.trim()) {
-    parts.push(meResult.stdout.trim());
+type Handler = (args: string[], ctx?: JiraContext) => Promise<string>;
+
+const COMMANDS: Record<string, Handler> = {
+  issue: issueCommand,
+  epic: epicCommand,
+  sprint: sprintCommand,
+  board: boardCommand,
+  project: projectCommand,
+  release: releaseCommand,
+  me: meCommand,
+  open: openCommand,
+  setup: (args) => setupCommand(args),
+};
+
+/**
+ * Split the global context flags out of a command's argv.
+ *
+ * They are accepted after the command (`jira-axi issue list --project OTHER`)
+ * so the command always comes first, matching the rest of the AXI surface.
+ */
+export function parseContextArgs(args: string[]): {
+  context: JiraContext | undefined;
+  strippedArgs: string[];
+} {
+  const stripped: string[] = [];
+  const context: JiraContext = {};
+
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    const next = (): string | undefined => args[index + 1];
+
+    if ((arg === "--project" || arg === "-p") && next() !== undefined) {
+      context.project = next();
+      index++;
+      continue;
+    }
+    if (arg.startsWith("--project=")) {
+      context.project = arg.slice("--project=".length);
+      continue;
+    }
+    if ((arg === "--config" || arg === "-c") && next() !== undefined) {
+      context.config = next();
+      index++;
+      continue;
+    }
+    if (arg.startsWith("--config=")) {
+      context.config = arg.slice("--config=".length);
+      continue;
+    }
+    if (arg === "--debug") {
+      context.debug = true;
+      continue;
+    }
+    stripped.push(arg);
   }
-  if (issueResult.exitCode === 0 && issueResult.stdout.trim()) {
-    parts.push(`recent issues:\n${issueResult.stdout.trim()}`);
-  }
-  if (parts.length === 0) {
-    return TOP_HELP;
-  }
-  return parts.join("\n\n");
+
+  const hasContext = Boolean(context.project || context.config || context.debug);
+  return { context: hasContext ? context : undefined, strippedArgs: stripped };
 }
 
-const COMMANDS: Record<string, (args: string[], ctx: undefined) => Promise<string>> = {
-  issue: (args) => issueCommand(args),
-  epic: (args) => epicCommand(args),
-  sprint: (args) => sprintCommand(args),
-  board: (args) => boardCommand(args),
-  project: (args) => projectCommand(args),
-  me: (args) => meCommand(args),
-};
+function withContext(handler: Handler): (args: string[], ctx: JiraContext | undefined) => Promise<string> {
+  return (args, ctx) => handler(parseContextArgs(args).strippedArgs, ctx);
+}
 
-export async function main(options: MainOptions = {}): Promise<void> {
-  await runAxiCli({
+export async function main(
+  options: { argv?: string[]; stdout?: { write: (chunk: string) => unknown } } = {},
+): Promise<void> {
+  await runAxiCli<JiraContext | undefined>({
     ...(options.argv ? { argv: options.argv } : {}),
+    ...(options.stdout ? { stdout: options.stdout } : {}),
     description: DESCRIPTION,
     version: VERSION,
     topLevelHelp: TOP_HELP,
-    ...(options.stdout ? { stdout: options.stdout } : {}),
-    home: (args) => homeCommand(args),
-    commands: COMMANDS,
+    home: withContext(homeCommand),
+    commands: Object.fromEntries(
+      Object.entries(COMMANDS).map(([name, handler]) => [name, withContext(handler)]),
+    ),
     getCommandHelp: (command) => COMMAND_HELP[command],
-    formatError: (error) => {
-      const axiError =
-        error instanceof AxiError
-          ? error
-          : new AxiError(
-              error instanceof Error ? error.message : String(error),
-              "UNKNOWN",
-            );
-      return {
-        output: `error: ${axiError.message}\ncode: ${axiError.code}\n`,
-        exitCode: exitCodeForError(axiError),
-      };
-    },
+    resolveContext: ({ args }) => parseContextArgs(args).context,
   });
 }

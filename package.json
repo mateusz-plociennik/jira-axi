@@ -1,8 +1,7 @@
 {
   "name": "@mateusz-plociennik/jira-axi",
   "version": "0.1.0",
-  "packageManager": "pnpm@9.15.4",
-  "description": "AXI-compliant jira-cli wrapper — non-interactive by default, plain-text output, agent-friendly error messages",
+  "description": "AXI-compliant Jira CLI wrapper — never interactive, token-efficient TOON output, contextual suggestions",
   "type": "module",
   "repository": {
     "type": "git",
@@ -13,6 +12,7 @@
     "cli",
     "agent",
     "axi",
+    "toon",
     "jira-cli"
   ],
   "bin": {
@@ -20,6 +20,7 @@
   },
   "files": [
     "dist",
+    "skills/jira-axi",
     "LICENSE",
     "README.md"
   ],
@@ -28,9 +29,9 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "tsx bin/jira-axi.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "tsx bin/jira-axi.ts",
     "prepublishOnly": "npm run build"
   },
   "license": "MIT",
@@ -38,16 +39,13 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@toon-format/toon": "^2.1.0",
     "axi-sdk-js": "^0.1.10"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
     "@types/node": "^22.0.0",
-    "eslint": "^9.0.0",
-    "globals": "^15.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
-    "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0"
   }
 }
