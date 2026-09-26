@@ -43,6 +43,7 @@ CI runs install, build and tests (including the `jira` subprocess checks: execut
 Known platform differences:
 
 - Timeout kill: POSIX kills the child's process group; Windows runs `taskkill /T /F` on the child's process tree.
+- If `jira` exits while something it spawned still holds its output pipes, jira-axi returns `jira`'s result after a 1s grace instead of waiting. POSIX also kills the leftover process group. On Windows the leftover process can't be found once `jira` is gone, so it may keep running (jira-axi itself no longer waits on it).
 - Pager: jira-cli never pages on Windows, so the `cat` pager pin only matters on POSIX.
 - Windows needs `jira.exe` on `PATH` (no shell is used, so `.cmd`/`.bat` shims are not found).
 - The subprocess checks use a fake `jira`; running against a real Jira server is validated manually, not in CI.

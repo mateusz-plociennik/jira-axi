@@ -2,18 +2,24 @@ import { copyFileSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFile
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { jiraExec } from "../src/jira.js";
+import { jiraExec, jiraRaw } from "../src/jira.js";
 
 // Fake `jira` on PATH is the node binary itself with this preload, so the same
 // fixture runs on POSIX and Windows (spawn without a shell only finds .exe there).
 // It reports the env it received after reading stdin to EOF, or (FAKE_JIRA_SLEEP)
-// spawns a grandchild holding our stdio, records its pid and blocks.
+// spawns a grandchild holding our stdio, records its pid and blocks. FAKE_JIRA_ORPHAN
+// does the same but prints and exits at once, leaving the grandchild on the pipes.
 const FAKE_PRELOAD = `
 const fs = require("node:fs");
-if (process.env.FAKE_JIRA_SLEEP) {
+const hold = process.env.FAKE_JIRA_SLEEP || process.env.FAKE_JIRA_ORPHAN;
+if (hold) {
   const env = { ...process.env, NODE_OPTIONS: "" };
   const g = require("node:child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], { stdio: "inherit", env });
-  fs.writeFileSync(process.env.FAKE_JIRA_SLEEP, String(g.pid));
+  fs.writeFileSync(hold, String(g.pid));
+  if (process.env.FAKE_JIRA_ORPHAN) {
+    fs.writeSync(1, "ORPHANED\\n");
+    process.exit(3);
+  }
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000);
 }
 let input = "";
@@ -31,6 +37,7 @@ const ENV_KEYS = [
   "JIRA_AXI_TIMEOUT_MS",
   "NODE_OPTIONS",
   "FAKE_JIRA_SLEEP",
+  "FAKE_JIRA_ORPHAN",
 ];
 const saved = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 let dir: string;
@@ -122,5 +129,20 @@ describe("jira child process", () => {
     await expect(jiraExec(["me"])).rejects.toMatchObject({ code: "TIMEOUT" });
     const pid = Number(readFileSync(pidFile, "utf8"));
     await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 3000 });
+  });
+
+  it("returns jira's result promptly when a descendant outlives it holding stdio", async () => {
+    useFake();
+    const pidFile = join(dir, "orphan.pid");
+    process.env["FAKE_JIRA_ORPHAN"] = pidFile;
+    process.env["JIRA_AXI_TIMEOUT_MS"] = "20000";
+    const started = Date.now();
+    const result = await jiraRaw(["me"]);
+    expect(Date.now() - started).toBeLessThan(10_000);
+    expect(result).toMatchObject({ stdout: "ORPHANED\n", exitCode: 3 });
+    const pid = Number(readFileSync(pidFile, "utf8"));
+    // POSIX takes down the process group; Windows can't reach the orphan (README).
+    if (process.platform === "win32") process.kill(pid);
+    else await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 3000 });
   });
 });

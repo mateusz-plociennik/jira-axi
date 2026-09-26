@@ -16,6 +16,9 @@ export interface ExecResult {
 
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024; // 10 MB
 const DEFAULT_TIMEOUT_MS = 120_000;
+// How long to wait for stdio to drain after jira exits before assuming a
+// descendant inherited the pipes and settling without it.
+const EXIT_GRACE_MS = 1_000;
 
 function timeoutMs(): number {
   const raw = process.env["JIRA_AXI_TIMEOUT_MS"];
@@ -59,7 +62,10 @@ function killTree(child: ChildProcess): void {
     if (typeof child.pid !== "number") {
       child.kill("SIGKILL");
     } else if (process.platform === "win32") {
-      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      // Once jira has exited its PID may be reused, so never taskkill it then.
+      if (child.exitCode === null && child.signalCode === null) {
+        spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      }
       child.kill("SIGKILL"); // in case taskkill is unavailable
     } else {
       process.kill(-child.pid, "SIGKILL");
@@ -87,10 +93,12 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     let stderr = "";
     let settled = false;
     let overflowed = false;
+    let exitGrace: NodeJS.Timeout | undefined;
 
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
+      clearTimeout(exitGrace);
       killTree(child);
       reject(jiraTimeoutError(Math.round(timeoutMs() / 1000)));
     }, timeoutMs());
@@ -124,10 +132,11 @@ function run(args: string[], input?: string): Promise<ExecResult> {
       reject(new AxiError(error.message, "UNKNOWN"));
     });
 
-    child.on("close", (code) => {
+    const finish = (code: number | null): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(exitGrace);
       if (overflowed) {
         reject(
           new AxiError(
@@ -138,6 +147,20 @@ function run(args: string[], input?: string): Promise<ExecResult> {
         return;
       }
       resolve({ stdout, stderr, exitCode: code ?? 1 });
+    };
+
+    child.on("close", finish);
+
+    // `close` waits for every holder of the stdio pipes. If jira exited but a
+    // pager/editor it spawned still holds them, stop waiting after a short grace:
+    // take down what we can and return jira's own result. On Windows the orphan
+    // itself can't be reached once jira's PID is gone (see README).
+    child.on("exit", (code) => {
+      if (settled) return;
+      exitGrace = setTimeout(() => {
+        killTree(child);
+        finish(code);
+      }, EXIT_GRACE_MS);
     });
 
     // jira-cli treats a non-terminal stdin as "no interaction possible", so
