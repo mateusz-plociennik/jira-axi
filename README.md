@@ -19,7 +19,7 @@ jira-axi makes every one of those paths deterministic:
 | TUI table for `issue`/`epic`/`sprint` | Always `--plain`, parsed and re-emitted as TOON                           |
 | `$EDITOR` for bodies and comments     | Always `--no-input`; text comes from `--body` or `--body-file`            |
 | Transition / assignee / link pickers  | Values are required arguments; a wrong value lists the valid ones         |
-| Pager (`less`) on several views       | Pager pinned to `cat`, terminal reported as dumb                          |
+| Pager (`less`) on several views       | `JIRA_PAGER` and `PAGER` forced to `cat` (inherited values ignored), terminal reported as dumb |
 | Prompts blocking on stdin             | stdin is closed immediately, and the call is killed after a timeout       |
 | Human-readable tables                 | TOON rows plus a `count:` line and `help:` next steps                     |
 | Exit code 1 for everything            | Structured `error`/`code` output: `AUTH_REQUIRED`, `NOT_FOUND`, and so on |

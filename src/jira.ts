@@ -27,16 +27,18 @@ function timeoutMs(): number {
  * Environment for the child `jira` process.
  *
  * jira-cli decides between its TUI and plain output from the terminal, and
- * resolves a pager (defaulting to `less`, which may not exist) for several
- * views. Both are pinned here so a wrapped call can never drop an agent into an
- * interactive pane or a pager it cannot exit.
+ * resolves a pager from JIRA_PAGER, then PAGER (defaulting to `less`) for
+ * several views. All are pinned here, overriding any inherited value, so a
+ * wrapped call can never drop an agent into an interactive pane or a pager it
+ * cannot exit.
  */
 function childEnv(): NodeJS.ProcessEnv {
   return {
     ...process.env,
     TERM: "dumb",
     NO_COLOR: "1",
-    JIRA_PAGER: process.env["JIRA_PAGER"] ?? "cat",
+    JIRA_PAGER: "cat",
+    PAGER: "cat",
   };
 }
 
