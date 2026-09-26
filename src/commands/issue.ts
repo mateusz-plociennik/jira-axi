@@ -58,7 +58,7 @@ flags{worklog add}:
   --comment <text>, --started <datetime>, --timezone <tz>, --new-estimate <estimate>
 examples:
   jira-axi issue list --assignee me --status "In Progress"
-  jira-axi issue list --jql "sprint in openSprints() AND status != Done"
+  jira-axi issue list --jql "sprint in openSprints() AND statusCategory != Done"
   jira-axi issue view PROJ-42
   jira-axi issue create --type Bug --summary "Login fails" --body "Steps..."
   jira-axi issue move PROJ-42 "In Progress"
