@@ -64,6 +64,7 @@ npx -y @mateusz-plociennik/jira-axi open PROJ-42                                
 - Use `--jql "..."` for anything the named filters do not express; the free-text positional maps to `text ~ "..."`.
 - For multi-line markdown (descriptions, comments), write a UTF-8 file and pass `--body-file <path>`. jira-axi never opens `$EDITOR`.
 - `--label` and `--component` repeat: pass the flag once per value. On `issue edit`, remove a label with `--remove-label <name>`.
+- A flag value that looks like another option (`--summary --priority`) is rejected with `VALIDATION_ERROR`. For a literal starting with `-`, use the equals form: `--summary=--flag-name`. Values like `--updated -7d` work as-is.
 - Transitions are name-based and case sensitive per your workflow; if the name is wrong, jira-axi lists the valid states in the error's `help:`.
 - Custom fields must already be declared in the user's jira-cli config, then set with `--custom story-points=3`.
 - Errors are structured: `CONFIG_MISSING` and `AUTH_REQUIRED` need a human, `NOT_FOUND` usually means a wrong key, `VALIDATION_ERROR` means the arguments need fixing.
