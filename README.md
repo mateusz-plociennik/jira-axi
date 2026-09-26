@@ -32,6 +32,24 @@ jira-axi makes every one of those paths deterministic:
 
 `release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{key}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this. Everything else works on both.
 
+### Platform support
+
+CI runs install, build and tests (including the `jira` subprocess checks: executable discovery on `PATH`, stdin EOF, pager env, timeout kill of the process tree) on:
+
+| OS                     | Node   |
+| ---------------------- | ------ |
+| Linux (ubuntu-latest)  | 20, 24 |
+| macOS (macos-latest)   | 20     |
+| Windows (windows-latest) | 20   |
+
+Known platform differences:
+
+- Timeout kill: POSIX kills the child's process group; Windows runs `taskkill /T /F` on the child's process tree.
+- If `jira` exits while something it spawned still holds its output pipes, jira-axi returns `jira`'s result once the pipes have been idle for 1s instead of waiting. POSIX also kills the leftover process group. On Windows the leftover process can't be found once `jira` is gone, so it may keep running (jira-axi itself no longer waits on it).
+- Pager: jira-cli never pages on Windows, so the `cat` pager pin only matters on POSIX.
+- Windows needs `jira.exe` on `PATH` (no shell is used, so `.cmd`/`.bat` shims are not found).
+- The subprocess checks use a fake `jira`; running against a real Jira server is validated manually, not in CI.
+
 ## Quick start
 
 ```sh
