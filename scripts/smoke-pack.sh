@@ -29,9 +29,11 @@ cd "$app"
 echo '{"name":"smoke","private":true}' > package.json
 npm install --omit=dev --no-audit --no-fund --silent "$tarball" \
   || fail "npm install of $tarball failed"
-for dev in typescript tsx vitest; do
+devs="$(node -p "Object.keys(require('$root/package.json').devDependencies || {}).join('\n')")"
+[[ -n "$devs" ]] || fail "no devDependencies found in package.json"
+while IFS= read -r dev; do
   [[ ! -e "node_modules/$dev" ]] || fail "devDependency $dev was installed"
-done
+done <<<"$devs"
 if grep -rIl --exclude='*.map' -F "$root" node_modules/@mateusz-plociennik/jira-axi; then
   fail "installed package references checkout path $root"
 fi
