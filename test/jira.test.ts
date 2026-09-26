@@ -182,7 +182,9 @@ describe("jira child process", () => {
     } else await vi.waitFor(() => expect(alive(pid)).toBe(false), { timeout: 3000 });
   });
 
-  it("keeps output that is still trickling in after jira exits", async () => {
+  // On Windows our pipes close as soon as jira exits, so a descendant's later
+  // output never reaches us regardless of the grace logic.
+  it.skipIf(process.platform === "win32")("keeps output that is still trickling in after jira exits", async () => {
     useFake();
     process.env["JIRA_AXI_TIMEOUT_MS"] = "20000";
     const result = await jiraRaw(["drip", join(dir, "drip.marker")]);
