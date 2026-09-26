@@ -15,6 +15,42 @@ const { issueCommand } = await import("../src/commands/issue.js");
 const { epicCommand } = await import("../src/commands/epic.js");
 const { sprintCommand } = await import("../src/commands/sprint.js");
 const { meCommand, openCommand } = await import("../src/commands/meta.js");
+const { main, parseContextArgs } = await import("../src/cli.js");
+
+describe("context flags", () => {
+  it("parses project/config in space and equals forms", () => {
+    expect(parseContextArgs(["list", "-p", "OTHER", "--config=/c.yml", "--debug"])).toEqual({
+      context: { project: "OTHER", config: "/c.yml", debug: true },
+      strippedArgs: ["list"],
+    });
+  });
+
+  it("rejects missing, empty, and option-shaped values", () => {
+    for (const args of [
+      ["--project", "--debug"],
+      ["-p", "--status", "Done"],
+      ["--project"],
+      ["--project="],
+      ["-c", "-p", "X"],
+      ["--config="],
+    ]) {
+      expect(() => parseContextArgs(args), args.join(" ")).toThrow(/requires a value/);
+    }
+  });
+
+  it("renders a structured VALIDATION_ERROR through main without running jira", async () => {
+    let out = "";
+    await main({
+      argv: ["issue", "create", "--type", "Bug", "--summary", "x", "--project", "--debug"],
+      stdout: { write: (chunk: string) => (out += chunk) },
+    });
+    expect(process.exitCode).toBe(2);
+    process.exitCode = undefined;
+    expect(out).toContain("VALIDATION_ERROR");
+    expect(out).toContain("--project requires a value");
+    expect(jiraJson).not.toHaveBeenCalled();
+  });
+});
 
 const RAW_ISSUE = {
   key: "PROJ-1",
@@ -83,6 +119,17 @@ describe("issue list", () => {
     await issueCommand(["list", "checkout bug"]);
     const argv = jiraJson.mock.calls[0][0];
     expect(argv[argv.length - 2]).toBe("checkout bug");
+  });
+
+  it("rejects invalid mutation input before running jira", async () => {
+    await expect(
+      issueCommand(["create", "--type", "Bug", "--summary", "--priority", "High"]),
+    ).rejects.toThrow(/--summary requires a value/);
+    await expect(
+      issueCommand(["edit", "PROJ-1", "--label", "-s", "New"]),
+    ).rejects.toThrow(/--label requires a value/);
+    expect(jiraJson).not.toHaveBeenCalled();
+    expect(jiraExec).not.toHaveBeenCalled();
   });
 
   it("rejects unknown flags instead of forwarding them", async () => {
