@@ -95,8 +95,8 @@ export function parseTabTable(
     );
   }
 
-  // An empty cell is just extra tab padding, so place each cell under the
-  // header column whose start position it reaches (never going backwards).
+  // Empty cells are just extra tab padding: each cell takes the next column, or
+  // skips ahead to the last later header whose start it has reached.
   return toRecords(
     lines.map((line) => {
       const cells: string[] = [];
