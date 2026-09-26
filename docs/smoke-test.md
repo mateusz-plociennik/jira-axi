@@ -14,7 +14,7 @@ Cloud has not been tested.
 
 ## Prerequisites
 
-- Node 20+, then `npm ci && npm run build` (the commands below call `node dist/bin/jira-axi.js`, abbreviated `jira-axi`)
+- Node 20+, then `npm ci && npm run build && alias jira-axi="node $PWD/dist/bin/jira-axi.js"`
 - `jira` installed. Record `jira version` and the `installation`/`auth_type` values from `~/.config/.jira/.config.yml`
 - `jira init` already run by a human, with `JIRA_API_TOKEN` exported. Never paste the token into logs, issues, or PRs.
 - For mutations only: a **disposable** project (or a sandbox board and sprint) that a human has explicitly approved. Never point sprint close or delete at active work.
@@ -44,7 +44,7 @@ Every flag jira-axi forwards must appear in `jira <subcommand> --help` for the i
 | R4 | `jira-axi issue list --assignee me --status ~Done` | filtered list | pass |
 | R5 | `jira-axi issue list --jql "created >= -30d"` | list | pass |
 | R6 | `jira-axi issue list zzqqxx-no-match` | `count: 0` | pass |
-| R7 | `jira-axi issue list --fields labels,reporter --limit 3` | extra columns, `count: 3` | pass |
+| R7 | `jira-axi issue list --fields labels,reporter --limit 3` | `labels`/`reporter` columns, at most 3 rows | pass |
 | R8 | `jira-axi issue list -p <KEY> --limit 3` | project forwarded | pass |
 | R9 | `jira-axi issue list -c <config> --limit 3` | config forwarded | pass |
 | R10 | `jira-axi issue view <ISSUE>` / `--comments 2` | `issue:` | pass |
