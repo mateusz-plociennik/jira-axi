@@ -42,10 +42,12 @@ function parse(stdout: string): Record<string, string> {
 function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
-    return true;
   } catch {
     return false;
   }
+  // A killed-but-unreaped zombie still answers kill(pid, 0); treat state Z as dead.
+  const stat = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf-8" }).stdout.trim();
+  return stat !== "" && !stat.startsWith("Z");
 }
 
 // POSIX only: the fake is a /bin/sh script and timeout cleanup relies on
