@@ -80,12 +80,18 @@ export function rejectUnknownFlags(args: string[], usage: string): void {
   }
 }
 
-/** Parse a positive integer flag value. */
-export function parseCount(raw: string | undefined, flag: string, fallback: number): number {
+/** Parse an integer flag value >= `min` (positive by default; pass 0 for offsets). */
+export function parseCount(
+  raw: string | undefined,
+  flag: string,
+  fallback: number,
+  min = 1,
+): number {
   if (raw === undefined) return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new AxiError(`${flag} must be a positive integer, got "${raw}"`, "VALIDATION_ERROR");
+  if (!Number.isInteger(value) || value < min) {
+    const kind = min === 0 ? "non-negative" : "positive";
+    throw new AxiError(`${flag} must be a ${kind} integer, got "${raw}"`, "VALIDATION_ERROR");
   }
   return value;
 }
