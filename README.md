@@ -142,6 +142,7 @@ npm run build       # compile TypeScript to dist/
 npm run dev         # run the CLI directly with tsx
 npm test            # run tests with vitest
 npm run test:watch  # watch mode
+npm run smoke:pack  # release check: pack, install tarball in a temp dir, run --version/--help
 ```
 
 ## License
