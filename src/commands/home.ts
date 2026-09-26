@@ -16,16 +16,17 @@ const homeSchema = [
   relativeTime("updated"),
 ];
 
-async function safeIssues(
+async function listIssues(
   argv: string[],
   ctx?: JiraContext,
 ): Promise<ReturnType<typeof normalizeIssue>[]> {
-  try {
-    const raw = await jiraJson<Record<string, unknown>[]>(argv, ctx);
-    return (Array.isArray(raw) ? raw : []).map(normalizeIssue);
-  } catch {
-    return [];
-  }
+  const raw = await jiraJson<Record<string, unknown>[]>(argv, ctx).catch((error: unknown) => {
+    // jira-cli exits non-zero with "No result found" when a query matches nothing;
+    // every other failure must surface instead of looking like an empty workload.
+    if (error instanceof AxiError && /No result found/i.test(error.message)) return [];
+    throw error;
+  });
+  return (Array.isArray(raw) ? raw : []).map(normalizeIssue);
 }
 
 /**
