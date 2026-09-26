@@ -30,7 +30,9 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
-Tested with jira-cli 1.7.0 against Jira Server/Data Center, read-only commands only. Cloud and write commands haven't been verified against a real instance yet. On that Server/DC setup `release list` returns `NOT_FOUND`, because jira-cli 1.7.0 calls `/rest/api/3` ([#16](https://github.com/mateusz-plociennik/jira-axi/issues/16)). See [docs/smoke-test.md](docs/smoke-test.md) for the checklist and results.
+`release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{projectIdOrKey}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this. Everything else works on both.
+
+Tested with jira-cli 1.7.0 against Jira Server/Data Center, read-only commands only; all passed except `release list` (see above, [#16](https://github.com/mateusz-plociennik/jira-axi/issues/16)). Cloud and write commands haven't been verified against a real instance yet. See [docs/smoke-test.md](docs/smoke-test.md) for the checklist and results.
 
 ## Quick start
 
@@ -57,7 +59,8 @@ jira-axi setup hooks            # optional SessionStart hooks for Claude Code, C
 ```sh
 jira-axi                                          # dashboard: you, your issues, recent activity
 jira-axi issue list                               # 30 most recent issues in the configured project
-jira-axi issue list --assignee me --status ~Done  # ~ negates a status
+jira-axi issue list --assignee me --status ~Done  # ~ negates a status name
+jira-axi issue list --assignee me --jql "statusCategory != Done"  # open work, whatever the final status is called
 jira-axi issue list --jql "sprint in openSprints() AND priority = High"
 jira-axi issue list "checkout timeout"            # free-text search (text ~ "...")
 jira-axi issue list --fields labels,reporter      # add columns to the default set
@@ -94,7 +97,7 @@ jira-axi open PROJ-42                             # prints the URL, never opens 
 | `sprint`  | Sprints — list, add, close                                                        |
 | `board`   | Boards — list                                                                     |
 | `project` | Projects — list                                                                   |
-| `release` | Releases (versions) — list                                                        |
+| `release` | Releases (versions) — list (Cloud only as of jira-cli 1.7.0; see Requirements)   |
 | `me`      | Show the authenticated Jira account                                               |
 | `open`    | Print the browse URL for an issue or project                                      |
 | `setup`   | Install optional agent session hooks                                              |
@@ -144,6 +147,7 @@ npm run build       # compile TypeScript to dist/
 npm run dev         # run the CLI directly with tsx
 npm test            # run tests with vitest
 npm run test:watch  # watch mode
+npm run smoke:pack  # release check: pack, install tarball in a temp dir, run --version/--help
 ```
 
 ## License

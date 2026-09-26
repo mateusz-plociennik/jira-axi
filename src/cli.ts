@@ -15,6 +15,7 @@ import {
   RELEASE_HELP,
 } from "./commands/meta.js";
 import { sprintCommand, SPRINT_HELP } from "./commands/sprint.js";
+import { requireValue } from "./args.js";
 import type { JiraContext } from "./jira.js";
 import { VERSION } from "./version.js";
 
@@ -82,22 +83,23 @@ export function parseContextArgs(args: string[]): {
     const arg = args[index];
     const next = (): string | undefined => args[index + 1];
 
-    if ((arg === "--project" || arg === "-p") && next() !== undefined) {
-      context.project = next();
+    if (arg === "--project" || arg === "-p") {
+      // Report the long form: only `--project=<value>` is recognized below.
+      context.project = requireValue(next(), "--project", true);
       index++;
       continue;
     }
     if (arg.startsWith("--project=")) {
-      context.project = arg.slice("--project=".length);
+      context.project = requireValue(arg.slice("--project=".length), "--project");
       continue;
     }
-    if ((arg === "--config" || arg === "-c") && next() !== undefined) {
-      context.config = next();
+    if (arg === "--config" || arg === "-c") {
+      context.config = requireValue(next(), "--config", true);
       index++;
       continue;
     }
     if (arg.startsWith("--config=")) {
-      context.config = arg.slice("--config=".length);
+      context.config = requireValue(arg.slice("--config=".length), "--config");
       continue;
     }
     if (arg === "--debug") {
@@ -129,6 +131,13 @@ export async function main(
       Object.entries(COMMANDS).map(([name, handler]) => [name, withContext(handler)]),
     ),
     getCommandHelp: (command) => COMMAND_HELP[command],
-    resolveContext: ({ args }) => parseContextArgs(args).context,
+    // The SDK does not catch here; withContext re-parses inside the handler and reports the error.
+    resolveContext: ({ args }) => {
+      try {
+        return parseContextArgs(args).context;
+      } catch {
+        return undefined;
+      }
+    },
   });
 }

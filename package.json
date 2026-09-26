@@ -32,6 +32,7 @@
     "dev": "tsx bin/jira-axi.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "smoke:pack": "bash scripts/smoke-pack.sh",
     "prepublishOnly": "npm run build"
   },
   "license": "MIT",

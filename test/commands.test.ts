@@ -15,6 +15,48 @@ const { issueCommand } = await import("../src/commands/issue.js");
 const { epicCommand } = await import("../src/commands/epic.js");
 const { sprintCommand } = await import("../src/commands/sprint.js");
 const { meCommand, openCommand } = await import("../src/commands/meta.js");
+const { main, parseContextArgs } = await import("../src/cli.js");
+
+describe("context flags", () => {
+  it("parses project/config in space and equals forms", () => {
+    expect(parseContextArgs(["list", "-p", "OTHER", "--config=/c.yml", "--debug"])).toEqual({
+      context: { project: "OTHER", config: "/c.yml", debug: true },
+      strippedArgs: ["list"],
+    });
+  });
+
+  it("rejects missing, empty, and option-shaped values", () => {
+    for (const args of [
+      ["--project", "--debug"],
+      ["-p", "--status", "Done"],
+      ["--project"],
+      ["--project="],
+      ["-c", "-p", "X"],
+      ["--config="],
+    ]) {
+      expect(() => parseContextArgs(args), args.join(" ")).toThrow(/requires a value/);
+    }
+  });
+
+  it("points short aliases at the long --flag=<value> form", () => {
+    expect(() => parseContextArgs(["-p", "-x"])).toThrow(
+      expect.objectContaining({ suggestions: ["Pass --project=<value> for a literal value starting with \"-\""] }),
+    );
+  });
+
+  it("renders a structured VALIDATION_ERROR through main without running jira", async () => {
+    let out = "";
+    await main({
+      argv: ["issue", "create", "--type", "Bug", "--summary", "x", "--project", "--debug"],
+      stdout: { write: (chunk: string) => (out += chunk) },
+    });
+    expect(process.exitCode).toBe(2);
+    process.exitCode = undefined;
+    expect(out).toContain("VALIDATION_ERROR");
+    expect(out).toContain("--project requires a value");
+    expect(jiraJson).not.toHaveBeenCalled();
+  });
+});
 
 const RAW_ISSUE = {
   key: "PROJ-1",
@@ -85,9 +127,41 @@ describe("issue list", () => {
     expect(argv[argv.length - 2]).toBe("checkout bug");
   });
 
+  it("rejects invalid mutation input before running jira", async () => {
+    await expect(
+      issueCommand(["create", "--type", "Bug", "--summary", "--priority", "High"]),
+    ).rejects.toThrow(/--summary requires a value/);
+    await expect(
+      issueCommand(["edit", "PROJ-1", "--label", "-s", "New"]),
+    ).rejects.toThrow(/--label requires a value/);
+    await expect(
+      issueCommand(["create", "--assignee", "me", "--type", "Bug", "--summary", "x", "--label", "-x"]),
+    ).rejects.toThrow(/--label requires a value/);
+    await expect(
+      issueCommand(["edit", "PROJ-1", "--assignee", "me", "--bogus"]),
+    ).rejects.toThrow(/Unknown flag/);
+    await expect(
+      issueCommand(["move", "PROJ-1", "Done", "--assignee", "me", "--bogus"]),
+    ).rejects.toThrow(/Unknown flag/);
+    expect(jiraJson).not.toHaveBeenCalled();
+    expect(jiraExec).not.toHaveBeenCalled();
+  });
+
   it("rejects unknown flags instead of forwarding them", async () => {
     await expect(issueCommand(["list", "--bogus", "x"])).rejects.toThrow(/Unknown flag/);
     expect(jiraJson).not.toHaveBeenCalled();
+  });
+
+  it("treats --from 0 like an omitted offset and keeps --limit 0 invalid", async () => {
+    jiraJson.mockResolvedValue([]);
+    await issueCommand(["list"]);
+    await issueCommand(["list", "--from", "0"]);
+    await issueCommand(["list", "--from=20"]);
+    expect(jiraJson.mock.calls[0][0]).toContain("0:30");
+    expect(jiraJson.mock.calls[1][0]).toEqual(jiraJson.mock.calls[0][0]);
+    expect(jiraJson.mock.calls[2][0]).toContain("20:30");
+    await expect(issueCommand(["list", "--from", "-1"])).rejects.toThrow(/--from/);
+    await expect(issueCommand(["list", "--limit", "0"])).rejects.toThrow(/--limit/);
   });
 
   it("reports an empty result set without failing", async () => {
@@ -130,6 +204,14 @@ describe("issue view", () => {
     expect(await issueCommand(["view", "PROJ-1", "--full"])).not.toContain(
       "description_truncated",
     );
+  });
+
+  it("does not suggest moving to a guessed status", async () => {
+    jiraJson.mockResolvedValue(RAW_ISSUE);
+    const output = await issueCommand(["view", "PROJ-1"]);
+    expect(output).not.toContain('move PROJ-1 \\"In Progress\\"');
+    expect(output).not.toContain('move PROJ-1 "In Progress"');
+    expect(output).toContain("<STATUS>");
   });
 
   it("requires an issue key", async () => {
@@ -316,6 +398,12 @@ describe("sprint", () => {
       "id,name,state,start,end",
     ]);
     expect(output).toContain("Sprint 4");
+  });
+
+  it("accepts --from 0 for sprint listings", async () => {
+    jiraExec.mockResolvedValue("");
+    await sprintCommand(["list", "--from", "0", "--limit", "5"]);
+    expect(jiraExec.mock.calls[0][0]).toEqual(expect.arrayContaining(["--paginate", "0:5"]));
   });
 
   it("lists issues of the current sprint as CSV", async () => {

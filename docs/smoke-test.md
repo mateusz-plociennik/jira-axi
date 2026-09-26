@@ -53,7 +53,7 @@ Every flag jira-axi forwards must appear in `jira <subcommand> --help` for the i
 | R13 | `jira-axi sprint list` / `--current` | sprints / issues | pass |
 | R14 | `jira-axi board list` | boards | pass |
 | R15 | `jira-axi project list` | projects | pass |
-| R16 | `jira-axi release list` | releases | **fail**: `NOT_FOUND` with the default project ([#16](https://github.com/mateusz-plociennik/jira-axi/issues/16)) |
+| R16 | `jira-axi release list` | releases | **fail**: `NOT_FOUND` with the default project; jira-cli 1.7.0 requests `/rest/api/3/project/{projectIdOrKey}/versions`, which Server/DC doesn't serve ([#16](https://github.com/mateusz-plociennik/jira-axi/issues/16)) |
 | R17 | `jira-axi open <ISSUE>` | URL printed, no browser | pass |
 
 ## 3. Mutations (disposable project only)
