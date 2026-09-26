@@ -55,7 +55,8 @@ jira-axi setup hooks            # optional SessionStart hooks for Claude Code, C
 ```sh
 jira-axi                                          # dashboard: you, your issues, recent activity
 jira-axi issue list                               # 30 most recent issues in the configured project
-jira-axi issue list --assignee me --status ~Done  # ~ negates a status
+jira-axi issue list --assignee me --status ~Done  # ~ negates a status name
+jira-axi issue list --assignee me --jql "statusCategory != Done"  # open work, whatever the final status is called
 jira-axi issue list --jql "sprint in openSprints() AND priority = High"
 jira-axi issue list "checkout timeout"            # free-text search (text ~ "...")
 jira-axi issue list --fields labels,reporter      # add columns to the default set

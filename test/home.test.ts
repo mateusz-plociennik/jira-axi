@@ -55,6 +55,20 @@ describe("home dashboard", () => {
     );
   });
 
+  it("filters open work by status category, not a status named Done", async () => {
+    mockQueries(
+      async () => [],
+      async () => [],
+    );
+    const output = await homeCommand([]);
+    const argv = jiraJson.mock.calls.find(([a]) => isAssignedQuery(a))?.[0] ?? [];
+    expect(argv.join(" ")).toContain("--jql statusCategory != Done");
+    expect(argv).not.toContain("~Done");
+    expect(output).toContain(
+      'Run `jira-axi issue list --assignee me --jql "statusCategory != Done"` for your open work',
+    );
+  });
+
   it("renders none for genuinely empty results", async () => {
     mockQueries(
       async () => [],

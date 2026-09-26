@@ -32,7 +32,7 @@ export function getSuggestions(input: SuggestionInput): string[] {
   switch (`${domain}.${action}`) {
     case "home.home":
       return [
-        "Run `jira-axi issue list --assignee me --status ~Done` for your open work",
+        "Run `jira-axi issue list --assignee me --jql \"statusCategory != Done\"` for your open work",
         "Run `jira-axi sprint list --current` for the active sprint",
       ];
     case "issue.list":
