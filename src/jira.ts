@@ -146,7 +146,7 @@ function run(args: string[], input?: string): Promise<ExecResult> {
 async function exec(args: string[], ctx?: JiraContext, input?: string): Promise<string> {
   const result = await run(buildArgs(args, ctx), input);
   if (result.exitCode !== 0) {
-    throw mapJiraError(result.stderr || result.stdout, result.exitCode);
+    throw mapJiraError(result.stderr || result.stdout, result.exitCode, args);
   }
   return result.stdout;
 }

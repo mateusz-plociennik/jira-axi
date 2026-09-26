@@ -33,6 +33,20 @@ describe("mapJiraError", () => {
     );
   });
 
+  it("picks 404 hints from the command", () => {
+    const stderr = "jira: Received unexpected response '404 '.";
+    const release = mapJiraError(stderr, 1, ["release", "list"]);
+    expect(release.code).toBe("NOT_FOUND");
+    expect(release.suggestions.join(" ")).not.toMatch(/issue key/i);
+    expect(release.suggestions[1]).toMatch(/project list/);
+
+    const issue = mapJiraError(stderr, 1, ["issue", "view", "PROJ-1"]);
+    expect(issue.suggestions).toEqual([
+      "Check the issue key — it is case sensitive, e.g. `PROJ-42`",
+      "Run `jira-axi issue list` to see reachable issues",
+    ]);
+  });
+
   it("surfaces the available states for an invalid transition", () => {
     const error = mapJiraError(
       `Error: invalid transition state "Foo"\nAvailable states for issue PROJ-1: 'In Progress', 'Done'`,
