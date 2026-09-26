@@ -70,6 +70,14 @@ describe("parseCount", () => {
     expect(() => parseCount("0", "--limit", 30)).toThrow(AxiError);
     expect(() => parseCount("abc", "--limit", 30)).toThrow(AxiError);
   });
+
+  it("accepts zero when min is 0 but still rejects negative, fractional, and non-numeric", () => {
+    expect(parseCount("0", "--from", 0, 0)).toBe(0);
+    expect(parseCount("10", "--from", 0, 0)).toBe(10);
+    for (const bad of ["-1", "1.5", "abc"]) {
+      expect(() => parseCount(bad, "--from", 0, 0)).toThrow(/non-negative integer/);
+    }
+  });
 });
 
 describe("pushRepeated", () => {

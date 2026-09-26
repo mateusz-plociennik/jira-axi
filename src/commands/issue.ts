@@ -114,7 +114,7 @@ export async function buildListArgs(
   const history = takeBoolFlag(args, "--history");
   const watching = takeBoolFlag(args, "--watching");
   const limit = parseCount(takeFlag(args, "--limit"), "--limit", DEFAULT_LIMIT);
-  const from = parseCount(takeFlag(args, "--from"), "--from", 0);
+  const from = parseCount(takeFlag(args, "--from"), "--from", 0, 0);
 
   const argv = [...base];
   if (jql) argv.push("--jql", jql);

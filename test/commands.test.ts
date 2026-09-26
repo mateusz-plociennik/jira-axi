@@ -90,6 +90,18 @@ describe("issue list", () => {
     expect(jiraJson).not.toHaveBeenCalled();
   });
 
+  it("treats --from 0 like an omitted offset and keeps --limit 0 invalid", async () => {
+    jiraJson.mockResolvedValue([]);
+    await issueCommand(["list"]);
+    await issueCommand(["list", "--from", "0"]);
+    await issueCommand(["list", "--from=20"]);
+    expect(jiraJson.mock.calls[0][0]).toContain("0:30");
+    expect(jiraJson.mock.calls[1][0]).toEqual(jiraJson.mock.calls[0][0]);
+    expect(jiraJson.mock.calls[2][0]).toContain("20:30");
+    await expect(issueCommand(["list", "--from", "-1"])).rejects.toThrow(/--from/);
+    await expect(issueCommand(["list", "--limit", "0"])).rejects.toThrow(/--limit/);
+  });
+
   it("reports an empty result set without failing", async () => {
     jiraJson.mockResolvedValue([]);
     const output = await issueCommand(["list"]);
@@ -316,6 +328,12 @@ describe("sprint", () => {
       "id,name,state,start,end",
     ]);
     expect(output).toContain("Sprint 4");
+  });
+
+  it("accepts --from 0 for sprint listings", async () => {
+    jiraExec.mockResolvedValue("");
+    await sprintCommand(["list", "--from", "0", "--limit", "5"]);
+    expect(jiraExec.mock.calls[0][0]).toEqual(expect.arrayContaining(["--paginate", "0:5"]));
   });
 
   it("lists issues of the current sprint as CSV", async () => {
