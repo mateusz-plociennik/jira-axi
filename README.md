@@ -30,7 +30,7 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
-`release list` needs Jira Cloud. jira-cli (as of 1.7.0) always requests `/rest/api/3/project/{key}/versions`, and Jira Server/Data Center only serves `/rest/api/2`, so on Server/DC the call returns `NOT_FOUND`. Everything else works on both.
+`release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{key}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this. Everything else works on both.
 
 ## Quick start
 
@@ -94,7 +94,7 @@ jira-axi open PROJ-42                             # prints the URL, never opens 
 | `sprint`  | Sprints — list, add, close                                                        |
 | `board`   | Boards — list                                                                     |
 | `project` | Projects — list                                                                   |
-| `release` | Releases (versions) — list (Jira Cloud only, see Requirements)                    |
+| `release` | Releases (versions) — list (Cloud only as of jira-cli 1.7.0; see Requirements)   |
 | `me`      | Show the authenticated Jira account                                               |
 | `open`    | Print the browse URL for an issue or project                                      |
 | `setup`   | Install optional agent session hooks                                              |
