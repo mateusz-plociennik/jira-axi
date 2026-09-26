@@ -429,6 +429,7 @@ async function addComment(args: string[], ctx?: JiraContext): Promise<string> {
 
 async function linkIssue(args: string[], ctx?: JiraContext): Promise<string> {
   const parts = positionals(args);
+  rejectUnknownFlags(args, "Run `jira-axi issue link <INWARD-KEY> <OUTWARD-KEY> \"<link type>\"`");
   if (parts[1] === "remote") {
     const [, , key, url, title] = parts;
     if (!key || !url || !title) {
@@ -458,6 +459,7 @@ async function linkIssue(args: string[], ctx?: JiraContext): Promise<string> {
 
 async function unlinkIssue(args: string[], ctx?: JiraContext): Promise<string> {
   const [, inward, outward] = positionals(args);
+  rejectUnknownFlags(args, "Run `jira-axi issue unlink <INWARD-KEY> <OUTWARD-KEY>`");
   if (!inward || !outward) {
     throw new AxiError("Missing unlink arguments", "VALIDATION_ERROR", [
       "Run `jira-axi issue unlink <INWARD-KEY> <OUTWARD-KEY>`",
