@@ -30,6 +30,8 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
+Tested with jira-cli 1.7.0 against Jira Server/Data Center, read-only commands only. Cloud and write commands haven't been verified against a real instance yet. See [docs/smoke-test.md](docs/smoke-test.md) for the checklist and results.
+
 ## Quick start
 
 ```sh
