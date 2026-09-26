@@ -45,6 +45,14 @@ describe("mapJiraError", () => {
       "Check the issue key — it is case sensitive, e.g. `PROJ-42`",
       "Run `jira-axi issue list` to see reachable issues",
     ]);
+
+    const boardHint = ["Run `jira-axi board list` to check the configured board"];
+    expect(mapJiraError(stderr, 1, ["sprint", "list"]).suggestions).toEqual(boardHint);
+    expect(mapJiraError(stderr, 1, ["board", "list"]).suggestions).toEqual(boardHint);
+
+    const fallback = ["Check `--project`, and run `jira-axi project list`"];
+    expect(mapJiraError(stderr, 1, ["project", "list"]).suggestions).toEqual(fallback);
+    expect(mapJiraError(stderr, 1).suggestions).toEqual(fallback);
   });
 
   it("surfaces the available states for an invalid transition", () => {

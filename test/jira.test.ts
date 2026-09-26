@@ -4,9 +4,10 @@ import { delimiter, join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { jiraExec } from "../src/jira.js";
 
-// Fake `jira` on PATH: reports the env it received, reads stdin to EOF, or sleeps.
+// Fake `jira` on PATH: reports the env it received, reads stdin to EOF, sleeps, or 404s on `release`.
 const FAKE_JIRA = `#!/bin/sh
 if [ "$1" = "sleep" ]; then exec sleep 5; fi
+if [ "$1" = "release" ]; then echo "jira: Received unexpected response '404 '." >&2; exit 1; fi
 input=$(cat)
 printf 'JIRA_PAGER=%s\\nPAGER=%s\\nTERM=%s\\nNO_COLOR=%s\\nJIRA_API_TOKEN=%s\\nSTDIN=%s\\n' \\
   "$JIRA_PAGER" "$PAGER" "$TERM" "$NO_COLOR" "$JIRA_API_TOKEN" "$input"
@@ -81,5 +82,16 @@ describe.skipIf(process.platform === "win32")("jira child process", () => {
     useFake();
     process.env["JIRA_AXI_TIMEOUT_MS"] = "200";
     await expect(jiraExec(["sleep"])).rejects.toMatchObject({ code: "TIMEOUT" });
+  });
+
+  it("passes the jira argv to error mapping for command-aware hints", async () => {
+    useFake();
+    await expect(jiraExec(["release", "list"])).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      suggestions: [
+        "Releases may be unavailable for this project or Jira deployment",
+        "Run `jira-axi project list` to check the project key",
+      ],
+    });
   });
 });
