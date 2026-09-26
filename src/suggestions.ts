@@ -42,7 +42,7 @@ export function getSuggestions(input: SuggestionInput): string[] {
       ];
     case "issue.view":
       return [
-        `Run \`jira-axi issue move ${ref} "In Progress"\` to transition it`,
+        `Run \`jira-axi issue move ${ref} "<STATUS>"\` to transition it — an invalid status lists the valid ones`,
         `Run \`jira-axi issue comment add ${ref} "..."\` to comment`,
       ];
     case "issue.create":

@@ -132,6 +132,14 @@ describe("issue view", () => {
     );
   });
 
+  it("does not suggest moving to a guessed status", async () => {
+    jiraJson.mockResolvedValue(RAW_ISSUE);
+    const output = await issueCommand(["view", "PROJ-1"]);
+    expect(output).not.toContain('move PROJ-1 \\"In Progress\\"');
+    expect(output).not.toContain('move PROJ-1 "In Progress"');
+    expect(output).toContain("<STATUS>");
+  });
+
   it("requires an issue key", async () => {
     await expect(issueCommand(["view"])).rejects.toThrow(/Missing issue key/);
   });
