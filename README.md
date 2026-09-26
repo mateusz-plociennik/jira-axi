@@ -30,6 +30,8 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
+`release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{key}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this. Everything else works on both.
+
 ### Platform support
 
 CI runs install, build and tests (including the `jira` subprocess checks: executable discovery on `PATH`, stdin EOF, pager env, timeout kill of the process tree) on:
@@ -43,7 +45,7 @@ CI runs install, build and tests (including the `jira` subprocess checks: execut
 Known platform differences:
 
 - Timeout kill: POSIX kills the child's process group; Windows runs `taskkill /T /F` on the child's process tree.
-- If `jira` exits while something it spawned still holds its output pipes, jira-axi returns `jira`'s result after a 1s grace instead of waiting. POSIX also kills the leftover process group. On Windows the leftover process can't be found once `jira` is gone, so it may keep running (jira-axi itself no longer waits on it).
+- If `jira` exits while something it spawned still holds its output pipes, jira-axi returns `jira`'s result once the pipes have been idle for 1s instead of waiting. POSIX also kills the leftover process group. On Windows the leftover process can't be found once `jira` is gone, so it may keep running (jira-axi itself no longer waits on it).
 - Pager: jira-cli never pages on Windows, so the `cat` pager pin only matters on POSIX.
 - Windows needs `jira.exe` on `PATH` (no shell is used, so `.cmd`/`.bat` shims are not found).
 - The subprocess checks use a fake `jira`; running against a real Jira server is validated manually, not in CI.
@@ -73,7 +75,8 @@ jira-axi setup hooks            # optional SessionStart hooks for Claude Code, C
 ```sh
 jira-axi                                          # dashboard: you, your issues, recent activity
 jira-axi issue list                               # 30 most recent issues in the configured project
-jira-axi issue list --assignee me --status ~Done  # ~ negates a status
+jira-axi issue list --assignee me --status ~Done  # ~ negates a status name
+jira-axi issue list --assignee me --jql "statusCategory != Done"  # open work, whatever the final status is called
 jira-axi issue list --jql "sprint in openSprints() AND priority = High"
 jira-axi issue list "checkout timeout"            # free-text search (text ~ "...")
 jira-axi issue list --fields labels,reporter      # add columns to the default set
@@ -110,7 +113,7 @@ jira-axi open PROJ-42                             # prints the URL, never opens 
 | `sprint`  | Sprints — list, add, close                                                        |
 | `board`   | Boards — list                                                                     |
 | `project` | Projects — list                                                                   |
-| `release` | Releases (versions) — list                                                        |
+| `release` | Releases (versions) — list (Cloud only as of jira-cli 1.7.0; see Requirements)   |
 | `me`      | Show the authenticated Jira account                                               |
 | `open`    | Print the browse URL for an issue or project                                      |
 | `setup`   | Install optional agent session hooks                                              |
@@ -160,6 +163,7 @@ npm run build       # compile TypeScript to dist/
 npm run dev         # run the CLI directly with tsx
 npm test            # run tests with vitest
 npm run test:watch  # watch mode
+npm run smoke:pack  # release check: pack, install tarball in a temp dir, run --version/--help
 ```
 
 ## License

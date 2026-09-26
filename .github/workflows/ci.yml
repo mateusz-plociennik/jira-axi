@@ -28,3 +28,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # bash script relying on POSIX bin shims and `env -i`
+      - if: runner.os != 'Windows'
+        run: npm run smoke:pack

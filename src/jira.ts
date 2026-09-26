@@ -16,8 +16,8 @@ export interface ExecResult {
 
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024; // 10 MB
 const DEFAULT_TIMEOUT_MS = 120_000;
-// How long to wait for stdio to drain after jira exits before assuming a
-// descendant inherited the pipes and settling without it.
+// How long stdio may stay idle after jira exits before assuming a descendant
+// inherited the pipes and settling without it.
 const EXIT_GRACE_MS = 1_000;
 
 function timeoutMs(): number {
@@ -94,6 +94,18 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     let settled = false;
     let overflowed = false;
     let exitGrace: NodeJS.Timeout | undefined;
+    let exited = false;
+    let exitCode: number | null = null;
+
+    // Restarted on every chunk after exit, so slow-but-live output is never cut;
+    // the overall timeout stays the hard cap.
+    const armExitGrace = (): void => {
+      clearTimeout(exitGrace);
+      exitGrace = setTimeout(() => {
+        killTree(child);
+        finish(exitCode);
+      }, EXIT_GRACE_MS);
+    };
 
     const timer = setTimeout(() => {
       if (settled) return;
@@ -104,6 +116,7 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     }, timeoutMs());
 
     const collect = (chunk: string, target: "out" | "err"): void => {
+      if (exited && !settled) armExitGrace();
       if (target === "out") {
         if (stdout.length + chunk.length > MAX_BUFFER_BYTES) {
           overflowed = true;
@@ -152,20 +165,22 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     child.on("close", finish);
 
     // `close` waits for every holder of the stdio pipes. If jira exited but a
-    // pager/editor it spawned still holds them, stop waiting after a short grace:
+    // pager/editor it spawned still holds them, stop waiting once they go idle:
     // take down what we can and return jira's own result. On Windows the orphan
     // itself can't be reached once jira's PID is gone (see README).
     child.on("exit", (code) => {
       if (settled) return;
-      exitGrace = setTimeout(() => {
-        killTree(child);
-        finish(code);
-      }, EXIT_GRACE_MS);
+      exited = true;
+      exitCode = code;
+      armExitGrace();
     });
 
     // jira-cli treats a non-terminal stdin as "no interaction possible", so
     // closing stdin immediately is what keeps prompts and $EDITOR from ever
     // opening. Never leave it open.
+    // A child that exits before reading all input raises EPIPE here; its exit
+    // code is still reported via "close", so the stream error is ignored.
+    child.stdin?.on("error", () => {});
     child.stdin?.end(input ?? "");
   });
 }
@@ -173,7 +188,7 @@ function run(args: string[], input?: string): Promise<ExecResult> {
 async function exec(args: string[], ctx?: JiraContext, input?: string): Promise<string> {
   const result = await run(buildArgs(args, ctx), input);
   if (result.exitCode !== 0) {
-    throw mapJiraError(result.stderr || result.stdout, result.exitCode);
+    throw mapJiraError(result.stderr || result.stdout, result.exitCode, args);
   }
   return result.stdout;
 }

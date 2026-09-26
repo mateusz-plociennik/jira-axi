@@ -16,7 +16,28 @@ interface ErrorPattern {
   pattern: RegExp;
   code: string;
   message: (match: RegExpMatchArray, stderr: string) => string;
-  suggestions?: (match: RegExpMatchArray, stderr: string) => string[];
+  suggestions?: (match: RegExpMatchArray, stderr: string, args: string[]) => string[];
+}
+
+function notFoundSuggestions(command: string | undefined): string[] {
+  switch (command) {
+    case "issue":
+    case "epic":
+      return [
+        "Check the issue key — it is case sensitive, e.g. `PROJ-42`",
+        "Run `jira-axi issue list` to see reachable issues",
+      ];
+    case "release":
+      return [
+        "Releases may be unavailable for this project or Jira deployment",
+        "Run `jira-axi project list` to check the project key",
+      ];
+    case "sprint":
+    case "board":
+      return ["Run `jira-axi board list` to check the configured board"];
+    default:
+      return ["Check `--project`, and run `jira-axi project list`"];
+  }
 }
 
 /** Pull the list jira-cli prints after "Available states for issue X: 'A', 'B'". */
@@ -67,10 +88,7 @@ const patterns: ErrorPattern[] = [
     pattern: /unexpected response '404[^']*'|HTTP 404|Issue does not exist|does not exist or you do not have permission/i,
     code: "NOT_FOUND",
     message: () => "Issue, project, or resource not found (404)",
-    suggestions: () => [
-      "Check the issue key — it is case sensitive, e.g. `PROJ-42`",
-      "Run `jira-axi issue list` to see reachable issues",
-    ],
+    suggestions: (_m, _stderr, args) => notFoundSuggestions(args[0]),
   },
   {
     pattern: /unexpected response '429[^']*'|HTTP 429/i,
@@ -136,8 +154,8 @@ function firstMeaningfulLine(text: string): string {
   return (preferred ?? lines[0] ?? "").replace(/^Error:\s*/i, "");
 }
 
-/** Map jira-cli stderr onto a structured AxiError. */
-export function mapJiraError(stderr: string, exitCode: number): AxiError {
+/** Map jira-cli stderr onto a structured AxiError; `args` is the jira argv, used for context-aware hints. */
+export function mapJiraError(stderr: string, exitCode: number, args: string[] = []): AxiError {
   const cleaned = cleanOutput(stderr);
   for (const { pattern, code, message, suggestions } of patterns) {
     const match = cleaned.match(pattern);
@@ -145,7 +163,7 @@ export function mapJiraError(stderr: string, exitCode: number): AxiError {
       return new AxiError(
         message(match, cleaned),
         code,
-        suggestions?.(match, cleaned) ?? [],
+        suggestions?.(match, cleaned, args) ?? [],
       );
     }
   }
