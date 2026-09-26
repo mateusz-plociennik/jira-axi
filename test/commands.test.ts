@@ -38,6 +38,12 @@ describe("context flags", () => {
     }
   });
 
+  it("points short aliases at the long --flag=<value> form", () => {
+    expect(() => parseContextArgs(["-p", "-x"])).toThrow(
+      expect.objectContaining({ suggestions: ["Pass --project=<value> for a literal value starting with \"-\""] }),
+    );
+  });
+
   it("renders a structured VALIDATION_ERROR through main without running jira", async () => {
     let out = "";
     await main({
@@ -128,6 +134,15 @@ describe("issue list", () => {
     await expect(
       issueCommand(["edit", "PROJ-1", "--label", "-s", "New"]),
     ).rejects.toThrow(/--label requires a value/);
+    await expect(
+      issueCommand(["create", "--assignee", "me", "--type", "Bug", "--summary", "x", "--label", "-x"]),
+    ).rejects.toThrow(/--label requires a value/);
+    await expect(
+      issueCommand(["edit", "PROJ-1", "--assignee", "me", "--bogus"]),
+    ).rejects.toThrow(/Unknown flag/);
+    await expect(
+      issueCommand(["move", "PROJ-1", "Done", "--assignee", "me", "--bogus"]),
+    ).rejects.toThrow(/Unknown flag/);
     expect(jiraJson).not.toHaveBeenCalled();
     expect(jiraExec).not.toHaveBeenCalled();
   });

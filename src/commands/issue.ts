@@ -274,8 +274,8 @@ async function createIssue(args: string[], ctx?: JiraContext): Promise<string> {
     'Run `jira-axi issue create --type Bug --summary "..." --body "..."`',
   );
   const priority = takeFlag(args, "--priority", "-y");
-  const assignee = await resolveUser(takeFlag(args, "--assignee", "-a"), ctx);
-  const reporter = await resolveUser(takeFlag(args, "--reporter", "-r"), ctx);
+  const assigneeFlag = takeFlag(args, "--assignee", "-a");
+  const reporterFlag = takeFlag(args, "--reporter", "-r");
   const parent = takeFlag(args, "--parent", "-P");
   const estimate = takeFlag(args, "--original-estimate", "-e");
   const labels = takeAllFlags(args, "--label", "-l");
@@ -292,6 +292,8 @@ async function createIssue(args: string[], ctx?: JiraContext): Promise<string> {
       ['Run `jira-axi issue create --type Bug --summary "..."`'],
     );
   }
+  const assignee = await resolveUser(assigneeFlag, ctx);
+  const reporter = await resolveUser(reporterFlag, ctx);
 
   const argv = ["issue", "create", "--no-input", "--raw", "--type", type, "--summary", summary];
   if (body !== undefined) argv.push("--body", body);
@@ -322,7 +324,7 @@ async function editIssue(args: string[], ctx?: JiraContext): Promise<string> {
     "Run `jira-axi issue edit <KEY> --body-file <path>`",
   );
   const priority = takeFlag(args, "--priority", "-y");
-  const assignee = await resolveUser(takeFlag(args, "--assignee", "-a"), ctx);
+  const assigneeFlag = takeFlag(args, "--assignee", "-a");
   const parent = takeFlag(args, "--parent", "-P");
   const labels = takeAllFlags(args, "--label", "-l");
   const removeLabels = takeAllFlags(args, "--remove-label");
@@ -332,6 +334,7 @@ async function editIssue(args: string[], ctx?: JiraContext): Promise<string> {
   const skipNotify = takeBoolFlag(args, "--skip-notify");
   const key = requireIssueKey(positionals(args)[1], "Run `jira-axi issue edit <KEY> [flags]`");
   rejectUnknownFlags(args, "Run `jira-axi issue edit --help` for supported flags");
+  const assignee = await resolveUser(assigneeFlag, ctx);
 
   const argv = ["issue", "edit", key, "--no-input"];
   if (summary) argv.push("--summary", summary);
@@ -378,7 +381,7 @@ async function assignIssue(args: string[], ctx?: JiraContext): Promise<string> {
 async function moveIssue(args: string[], ctx?: JiraContext): Promise<string> {
   const comment = takeFlag(args, "--comment");
   const resolution = takeFlag(args, "--resolution", "-R");
-  const assignee = await resolveUser(takeFlag(args, "--assignee", "-a"), ctx);
+  const assigneeFlag = takeFlag(args, "--assignee", "-a");
   const [, key, state] = positionals(args);
   requireIssueKey(key, 'Run `jira-axi issue move <KEY> "<state>"`');
   if (!state) {
@@ -387,6 +390,7 @@ async function moveIssue(args: string[], ctx?: JiraContext): Promise<string> {
     ]);
   }
   rejectUnknownFlags(args, "Run `jira-axi issue move --help` for supported flags");
+  const assignee = await resolveUser(assigneeFlag, ctx);
 
   const argv = ["issue", "move", key, state];
   if (comment) argv.push("--comment", comment);
@@ -475,13 +479,14 @@ async function unlinkIssue(args: string[], ctx?: JiraContext): Promise<string> {
 async function cloneIssue(args: string[], ctx?: JiraContext): Promise<string> {
   const summary = takeFlag(args, "--summary", "-s");
   const priority = takeFlag(args, "--priority", "-y");
-  const assignee = await resolveUser(takeFlag(args, "--assignee", "-a"), ctx);
+  const assigneeFlag = takeFlag(args, "--assignee", "-a");
   const parent = takeFlag(args, "--parent", "-P");
   const labels = takeAllFlags(args, "--label", "-l");
   const components = takeAllFlags(args, "--component", "-C");
   const replacements = takeAllFlags(args, "--replace", "-H");
   const key = requireIssueKey(positionals(args)[1], "Run `jira-axi issue clone <KEY>`");
   rejectUnknownFlags(args, "Run `jira-axi issue clone --help` for supported flags");
+  const assignee = await resolveUser(assigneeFlag, ctx);
 
   const argv = ["issue", "clone", key];
   if (summary) argv.push("--summary", summary);

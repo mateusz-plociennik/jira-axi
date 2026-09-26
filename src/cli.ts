@@ -84,7 +84,8 @@ export function parseContextArgs(args: string[]): {
     const next = (): string | undefined => args[index + 1];
 
     if (arg === "--project" || arg === "-p") {
-      context.project = requireValue(next(), arg, true);
+      // Report the long form: only `--project=<value>` is recognized below.
+      context.project = requireValue(next(), "--project", true);
       index++;
       continue;
     }
@@ -93,7 +94,7 @@ export function parseContextArgs(args: string[]): {
       continue;
     }
     if (arg === "--config" || arg === "-c") {
-      context.config = requireValue(next(), arg, true);
+      context.config = requireValue(next(), "--config", true);
       index++;
       continue;
     }
