@@ -141,8 +141,12 @@ describe("jira child process", () => {
     expect(Date.now() - started).toBeLessThan(10_000);
     expect(result).toMatchObject({ stdout: "ORPHANED\n", exitCode: 3 });
     const pid = Number(readFileSync(pidFile, "utf8"));
-    // POSIX takes down the process group; Windows can't reach the orphan (README).
-    if (process.platform === "win32") process.kill(pid);
-    else await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 3000 });
+    // POSIX takes down the process group; Windows can't reach the orphan (README),
+    // so just clean it up if it's still around.
+    if (process.platform === "win32") {
+      try {
+        process.kill(pid);
+      } catch {}
+    } else await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 3000 });
   });
 });
