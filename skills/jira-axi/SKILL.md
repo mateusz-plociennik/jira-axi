@@ -68,5 +68,5 @@ npx -y @mateusz-plociennik/jira-axi open PROJ-42                                
 - Transitions are name-based and case sensitive per your workflow; if the name is wrong, jira-axi lists the valid states in the error's `help:`.
 - Custom fields must already be declared in the user's jira-cli config, then set with `--custom story-points=3`.
 - Errors are structured: `CONFIG_MISSING` and `AUTH_REQUIRED` need a human, `NOT_FOUND` usually means a wrong key, `VALIDATION_ERROR` means the arguments need fixing.
-- `release list` currently works only on Jira Cloud: as of jira-cli 1.7.0 it calls the v3 versions API, which Jira Server/Data Center lacks, so there it fails with `NOT_FOUND` (newer jira-cli may fix this). Don't retry with other keys; tell the user.
+- `release list` currently works only on Jira Cloud: as of jira-cli 1.7.0 it calls `/rest/api/3/project/{projectIdOrKey}/versions`, which Jira Server/Data Center lacks, so there it fails with `NOT_FOUND` (newer jira-cli may fix this). Don't retry with other keys; tell the user.
 - Long-running calls abort after 120s (`JIRA_AXI_TIMEOUT_MS` to change) rather than hanging on a prompt.
