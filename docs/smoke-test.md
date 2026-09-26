@@ -19,12 +19,14 @@ Cloud has not been tested.
 - `jira init` already run by a human, with `JIRA_API_TOKEN` exported. Never paste the token into logs, issues, or PRs.
 - For mutations only: a **disposable** project (or a sandbox board and sprint) that a human has explicitly approved. Never point sprint close or delete at active work.
 
-Run every command with the interactive fallbacks sabotaged, so a launched editor, pager, or browser fails fast and closed stdin makes any prompt fail too:
+Run every command with the interactive fallbacks sabotaged, so a launched editor or browser fails fast and closed stdin makes any prompt fail too:
 
 ```sh
-export EDITOR=false VISUAL=false PAGER=false JIRA_PAGER=false BROWSER=false JIRA_AXI_TIMEOUT_MS=60000
+export EDITOR=false VISUAL=false BROWSER=false JIRA_AXI_TIMEOUT_MS=60000
 jira-axi <command> </dev/null
 ```
+
+The pager can't be sabotaged this way: jira-axi intentionally pins `JIRA_PAGER` and `PAGER` to `cat` for the child `jira` process, so inherited values are ignored. To check the underlying jira-cli pager behavior, run `jira` directly, e.g. `PAGER=false jira issue list </dev/null`.
 
 Pass means exit code 0, TOON output with a `help:` block (except `open`), and no hang. Expected failures must return a structured `error:` and `code:`.
 
@@ -56,7 +58,13 @@ Every flag jira-axi forwards must appear in `jira <subcommand> --help` for the i
 
 ## 3. Mutations (disposable project only)
 
-Not run yet. Blocked until a human approves a disposable project. Run these in order against issues created in step M1 only, and record each result.
+Not run yet. Blocked until a human approves a disposable project. Run these in order against issues created in steps M1 and M2 only, and record each result.
+
+Create the body fixture for M2 first:
+
+```sh
+printf 'jira-axi smoke body\n' > ./tmp.md
+```
 
 | # | Command | Verify with |
 | - | ------- | ----------- |
@@ -72,9 +80,9 @@ Not run yet. Blocked until a human approves a disposable project. Run these in o
 | M10 | `jira-axi epic create -p SANDBOX --name "smoke epic" --summary "smoke epic"` → `$E`; `epic add $E $K`; `epic remove $K` | `epic list $E` |
 | M11 | `jira-axi sprint add <sandbox sprint id> $K` | `sprint list <id>` |
 | M12 | `jira-axi sprint close <sandbox sprint id>`, **only** for a sprint created for this test | sprint state |
-| M13 | `jira-axi issue delete $K3`, `$K2`, `$K`, `$E` (use `--cascade` if subtasks exist) | `issue view` → `NOT_FOUND` |
+| M13 | One key per call: `jira-axi issue delete $K3`, `jira-axi issue delete $K2`, `jira-axi issue delete $K`, `jira-axi issue delete $E` (add `--cascade` to any key with subtasks) | `issue view` → `NOT_FOUND` |
 
-Cleanup: list every key and sprint that was created, and confirm step M13 removed them.
+Cleanup: list every key and sprint that was created, confirm step M13 removed them, and `rm ./tmp.md`.
 
 ## Fixtures
 
