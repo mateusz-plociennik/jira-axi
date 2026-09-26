@@ -44,6 +44,29 @@ describe("parseTabTable", () => {
     expect(parseTabTable(output)).toEqual([{ id: "1", name: "Main board", type: "scrum" }]);
   });
 
+  it("keeps an empty middle cell in its header column", () => {
+    const output = "KEY\t\tNAME\t\t\t\tTYPE\tLEAD\nAU\t\tAdmin Utility\t\t\t\tJane Doe\n";
+    expect(
+      parseTabTable(output, { hasHeader: true, columns: ["key", "name", "type", "lead"] }),
+    ).toEqual([{ key: "AU", name: "Admin Utility", type: "", lead: "Jane Doe" }]);
+  });
+
+  it("fills an empty last cell", () => {
+    const output = "KEY\t\tNAME\t\t\t\tTYPE\tLEAD\nAU\t\tAdmin Utility\t\t\tsoftware\n";
+    expect(parseTabTable(output)).toEqual([
+      { key: "AU", name: "Admin Utility", type: "software", lead: "" },
+    ]);
+  });
+
+  it("handles values longer than a tab stop", () => {
+    const output =
+      "ID\tNAME\t\t\tTYPE\n1\tShort\t\t\tscrum\n22\tA much longer name\tkanban\n";
+    expect(parseTabTable(output)).toEqual([
+      { id: "1", name: "Short", type: "scrum" },
+      { id: "22", name: "A much longer name", type: "kanban" },
+    ]);
+  });
+
   it("drops the header row when explicit columns are supplied", () => {
     const output = "42\tSprint 4\tactive\n";
     expect(parseTabTable(output, { columns: ["id", "name", "state"], hasHeader: false })).toEqual([

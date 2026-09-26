@@ -32,7 +32,7 @@ export function getSuggestions(input: SuggestionInput): string[] {
   switch (`${domain}.${action}`) {
     case "home.home":
       return [
-        "Run `jira-axi issue list --assignee me --status ~Done` for your open work",
+        "Run `jira-axi issue list --assignee me --jql \"statusCategory != Done\"` for your open work",
         "Run `jira-axi sprint list --current` for the active sprint",
       ];
     case "issue.list":
@@ -42,7 +42,7 @@ export function getSuggestions(input: SuggestionInput): string[] {
       ];
     case "issue.view":
       return [
-        `Run \`jira-axi issue move ${ref} "In Progress"\` to transition it`,
+        `Run \`jira-axi issue move ${ref} "<STATUS>"\` to transition it — an invalid status lists the valid ones`,
         `Run \`jira-axi issue comment add ${ref} "..."\` to comment`,
       ];
     case "issue.create":

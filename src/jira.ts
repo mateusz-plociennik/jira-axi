@@ -139,6 +139,9 @@ function run(args: string[], input?: string): Promise<ExecResult> {
     // jira-cli treats a non-terminal stdin as "no interaction possible", so
     // closing stdin immediately is what keeps prompts and $EDITOR from ever
     // opening. Never leave it open.
+    // A child that exits before reading all input raises EPIPE here; its exit
+    // code is still reported via "close", so the stream error is ignored.
+    child.stdin?.on("error", () => {});
     child.stdin?.end(input ?? "");
   });
 }

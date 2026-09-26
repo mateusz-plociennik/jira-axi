@@ -70,9 +70,9 @@ export function parseCsvRecords(text: string, columns: string[]): Record<string,
  * Parse the tab-aligned table jira-cli prints for views that have no CSV mode
  * (`sprint list`, `board list`, `project list`, `release list`).
  *
- * Go's tabwriter pads cells with additional tab characters, so runs of tabs
- * collapse to a single separator. Trailing cells that jira left empty are
- * filled in as empty strings rather than shifting later columns.
+ * Go's tabwriter pads cells with tabs (8-column stops). With a header, cells are
+ * aligned to header column positions so empty cells don't shift later columns.
+ * Without one, runs of tabs collapse to a single separator.
  */
 export function parseTabTable(
   text: string,
@@ -86,15 +86,52 @@ export function parseTabTable(
 
   const hasHeader = options.hasHeader ?? options.columns === undefined;
   const headerLine = hasHeader ? lines.shift() : undefined;
-  const columns =
-    options.columns ??
-    (headerLine ?? "")
-      .split(/\t+/)
-      .map((name) => name.trim().toLowerCase())
-      .filter((name) => name !== "");
+  const header = headerLine === undefined ? [] : tabCells(headerLine);
+  const columns = options.columns ?? header.map((cell) => cell.text.toLowerCase());
+  if (header.length === 0) {
+    return toRecords(
+      lines.map((line) => line.split(/\t+/).map((cell) => cell.trim())),
+      columns,
+    );
+  }
 
+  // Empty cells are just extra tab padding: each cell takes the next column, or
+  // skips ahead to the last later header whose start it has reached.
   return toRecords(
-    lines.map((line) => line.split(/\t+/).map((cell) => cell.trim())),
+    lines.map((line) => {
+      const cells: string[] = [];
+      let index = -1;
+      for (const cell of tabCells(line)) {
+        let target = index + 1;
+        while (target + 1 < header.length && header[target + 1].start <= cell.start) target++;
+        cells[target] = cell.text;
+        index = target;
+      }
+      return cells;
+    }),
     columns,
   );
+}
+
+/** Split a tabwriter line into cells with their start column (8-column tab stops). */
+function tabCells(line: string): { text: string; start: number }[] {
+  const cells: { text: string; start: number }[] = [];
+  let col = 0;
+  let current: { text: string; start: number } | undefined;
+  for (const char of line) {
+    if (char === "\t") {
+      current = undefined;
+      col = (col | 7) + 1;
+      continue;
+    }
+    if (!current) {
+      current = { text: "", start: col };
+      cells.push(current);
+    }
+    current.text += char;
+    col++;
+  }
+  return cells
+    .map((cell) => ({ text: cell.text.trim(), start: cell.start }))
+    .filter((cell) => cell.text !== "");
 }

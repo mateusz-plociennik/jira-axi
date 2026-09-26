@@ -4,9 +4,18 @@ function equalsPrefix(flag: string): string {
   return `${flag}=`;
 }
 
-function requireValue(value: string | undefined, flag: string): string {
+// `--x`, `-x`, `--x=y`: another option, not a value. `-7d` and text with spaces still pass.
+const OPTION_LIKE = /^--?[A-Za-z][\w-]*(=|$)/;
+
+/** Validate a flag value; `spaced` values (`--flag value`) must not look like another option. */
+export function requireValue(value: string | undefined, flag: string, spaced = false): string {
   if (value === undefined || value.trim() === "") {
     throw new AxiError(`${flag} requires a value`, "VALIDATION_ERROR");
+  }
+  if (spaced && OPTION_LIKE.test(value)) {
+    throw new AxiError(`${flag} requires a value, got option ${value}`, "VALIDATION_ERROR", [
+      `Pass ${flag}=<value> for a literal value starting with "-"`,
+    ]);
   }
   return value;
 }
@@ -18,7 +27,7 @@ export function takeFlag(args: string[], ...flags: string[]): string | undefined
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       if (arg === flag) {
-        const value = requireValue(args[i + 1], flag);
+        const value = requireValue(args[i + 1], flag, true);
         args.splice(i, 2);
         return value;
       }
@@ -41,7 +50,7 @@ export function takeAllFlags(args: string[], ...flags: string[]): string[] {
     while (i < args.length) {
       const arg = args[i];
       if (arg === flag) {
-        values.push(requireValue(args[i + 1], flag));
+        values.push(requireValue(args[i + 1], flag, true));
         args.splice(i, 2);
       } else if (arg.startsWith(prefix)) {
         values.push(requireValue(arg.slice(prefix.length), flag));
@@ -80,12 +89,18 @@ export function rejectUnknownFlags(args: string[], usage: string): void {
   }
 }
 
-/** Parse a positive integer flag value. */
-export function parseCount(raw: string | undefined, flag: string, fallback: number): number {
+/** Parse an integer flag value >= `min` (positive by default; pass 0 for offsets). */
+export function parseCount(
+  raw: string | undefined,
+  flag: string,
+  fallback: number,
+  min = 1,
+): number {
   if (raw === undefined) return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new AxiError(`${flag} must be a positive integer, got "${raw}"`, "VALIDATION_ERROR");
+  if (!Number.isInteger(value) || value < min) {
+    const kind = min === 0 ? "non-negative" : "positive";
+    throw new AxiError(`${flag} must be a ${kind} integer, got "${raw}"`, "VALIDATION_ERROR");
   }
   return value;
 }

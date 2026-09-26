@@ -99,8 +99,8 @@ async function createEpic(args: string[], ctx?: JiraContext): Promise<string> {
     'Run `jira-axi epic create --name "..." --summary "..."`',
   );
   const priority = takeFlag(args, "--priority", "-y");
-  const assignee = await resolveUser(takeFlag(args, "--assignee", "-a"), ctx);
-  const reporter = await resolveUser(takeFlag(args, "--reporter", "-r"), ctx);
+  const assigneeFlag = takeFlag(args, "--assignee", "-a");
+  const reporterFlag = takeFlag(args, "--reporter", "-r");
   const labels = takeAllFlags(args, "--label", "-l");
   const components = takeAllFlags(args, "--component", "-C");
   rejectUnknownFlags(args, "Run `jira-axi epic create --help` for supported flags");
@@ -112,6 +112,8 @@ async function createEpic(args: string[], ctx?: JiraContext): Promise<string> {
       ['Run `jira-axi epic create --name "Checkout v2" --summary "Checkout v2"`'],
     );
   }
+  const assignee = await resolveUser(assigneeFlag, ctx);
+  const reporter = await resolveUser(reporterFlag, ctx);
 
   const argv = ["epic", "create", "--no-input", "--name", name, "--summary", summary];
   if (body !== undefined) argv.push("--body", body);

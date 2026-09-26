@@ -28,6 +28,31 @@ describe("takeFlag", () => {
     expect(() => takeFlag(["--status"], "--status")).toThrow(AxiError);
     expect(() => takeFlag(["--status="], "--status")).toThrow(AxiError);
   });
+
+  it("does not consume an adjacent option as the value", () => {
+    for (const next of ["--priority", "-y", "--priority=High"]) {
+      const args = ["--summary", next, "High"];
+      expect(() => takeFlag(args, "--summary", "-s")).toThrow(/--summary requires a value/);
+      expect(args).toEqual(["--summary", next, "High"]);
+    }
+    expect(() => takeFlag(["-s", "--priority"], "--summary", "-s")).toThrow(/-s requires a value/);
+  });
+
+  it("reports missing values as VALIDATION_ERROR", () => {
+    try {
+      takeFlag(["--summary", "--priority", "High"], "--summary");
+      expect.unreachable();
+    } catch (error) {
+      expect((error as AxiError).code).toBe("VALIDATION_ERROR");
+    }
+  });
+
+  it("keeps dash-prefixed values that are not options", () => {
+    expect(takeFlag(["--updated", "-7d"], "--updated")).toBe("-7d");
+    expect(takeFlag(["--summary", "-"], "--summary")).toBe("-");
+    expect(takeFlag(["--summary", "-x is broken"], "--summary")).toBe("-x is broken");
+    expect(takeFlag(["--summary=--literal"], "--summary")).toBe("--literal");
+  });
 });
 
 describe("takeAllFlags", () => {
@@ -35,6 +60,14 @@ describe("takeAllFlags", () => {
     const args = ["list", "--label", "a", "--label=b", "-l", "c"];
     expect(takeAllFlags(args, "--label", "-l")).toEqual(["a", "b", "c"]);
     expect(args).toEqual(["list"]);
+  });
+
+  it("validates every occurrence like takeFlag", () => {
+    expect(() => takeAllFlags(["--label", "a", "-l", "--status"], "--label", "-l")).toThrow(
+      /-l requires a value/,
+    );
+    expect(() => takeAllFlags(["--label="], "--label")).toThrow(AxiError);
+    expect(takeAllFlags(["--remove-label=-x"], "--remove-label")).toEqual(["-x"]);
   });
 });
 
@@ -69,6 +102,14 @@ describe("parseCount", () => {
     expect(parseCount("5", "--limit", 30)).toBe(5);
     expect(() => parseCount("0", "--limit", 30)).toThrow(AxiError);
     expect(() => parseCount("abc", "--limit", 30)).toThrow(AxiError);
+  });
+
+  it("accepts zero when min is 0 but still rejects negative, fractional, and non-numeric", () => {
+    expect(parseCount("0", "--from", 0, 0)).toBe(0);
+    expect(parseCount("10", "--from", 0, 0)).toBe(10);
+    for (const bad of ["-1", "1.5", "abc"]) {
+      expect(() => parseCount(bad, "--from", 0, 0)).toThrow(/non-negative integer/);
+    }
   });
 });
 
