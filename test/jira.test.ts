@@ -17,6 +17,7 @@ case "$1" in
   flood) head -c 11000000 /dev/zero | tr '\\0' a; exit 0 ;;
   exit) exit 0 ;;
   hang) sleep 30 & echo $! > "$2"; exec sleep 30 ;;
+  release) echo "jira: Received unexpected response '404 '." >&2; exit 1 ;;
 esac
 input=$(cat)
 printf 'JIRA_PAGER=%s\\nPAGER=%s\\nTERM=%s\\nNO_COLOR=%s\\nJIRA_API_TOKEN=%s\\nSTDIN=%s\\n' \\
@@ -164,6 +165,17 @@ describe.skipIf(process.platform === "win32")("jira child process", () => {
     process.env["JIRA_AXI_TIMEOUT_MS"] = "200";
     await expect(jiraExec(["hang", join(dir, "pid-inline")])).rejects.toMatchObject({
       code: "TIMEOUT",
+    });
+  });
+
+  it("passes the jira argv to error mapping for command-aware hints", async () => {
+    useFake();
+    await expect(jiraExec(["release", "list"])).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      suggestions: [
+        "Releases may be unavailable for this project or Jira deployment",
+        "Run `jira-axi project list` to check the project key",
+      ],
     });
   });
 
