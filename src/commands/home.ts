@@ -43,7 +43,7 @@ export async function homeCommand(_args: string[], ctx?: JiraContext): Promise<s
   );
 
   const [mine, recent] = await Promise.all([
-    safeIssues(
+    listIssues(
       [
         "issue",
         "list",
@@ -59,7 +59,7 @@ export async function homeCommand(_args: string[], ctx?: JiraContext): Promise<s
       ],
       ctx,
     ),
-    safeIssues(
+    listIssues(
       [
         "issue",
         "list",
