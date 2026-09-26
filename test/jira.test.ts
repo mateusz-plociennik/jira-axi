@@ -1,18 +1,37 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { jiraExec } from "../src/jira.js";
 
-// Fake `jira` on PATH: reports the env it received, reads stdin to EOF, or sleeps.
-const FAKE_JIRA = `#!/bin/sh
-if [ "$1" = "sleep" ]; then exec sleep 5; fi
-input=$(cat)
-printf 'JIRA_PAGER=%s\\nPAGER=%s\\nTERM=%s\\nNO_COLOR=%s\\nJIRA_API_TOKEN=%s\\nSTDIN=%s\\n' \\
-  "$JIRA_PAGER" "$PAGER" "$TERM" "$NO_COLOR" "$JIRA_API_TOKEN" "$input"
+// Fake `jira` on PATH is the node binary itself with this preload, so the same
+// fixture runs on POSIX and Windows (spawn without a shell only finds .exe there).
+// It reports the env it received after reading stdin to EOF, or (FAKE_JIRA_SLEEP)
+// spawns a grandchild holding our stdio, records its pid and blocks.
+const FAKE_PRELOAD = `
+const fs = require("node:fs");
+if (process.env.FAKE_JIRA_SLEEP) {
+  const env = { ...process.env, NODE_OPTIONS: "" };
+  const g = require("node:child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], { stdio: "inherit", env });
+  fs.writeFileSync(process.env.FAKE_JIRA_SLEEP, String(g.pid));
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 30000);
+}
+let input = "";
+try { input = fs.readFileSync(0, "utf8"); } catch (e) { if (e.code !== "EOF") throw e; }
+const keys = ["JIRA_PAGER", "PAGER", "TERM", "NO_COLOR", "JIRA_API_TOKEN"];
+fs.writeSync(1, keys.map((k) => k + "=" + (process.env[k] ?? "")).join("\\n") + "\\nSTDIN=" + input + "\\n");
+process.exit(0);
 `;
 
-const ENV_KEYS = ["PATH", "JIRA_PAGER", "PAGER", "JIRA_API_TOKEN", "JIRA_AXI_TIMEOUT_MS"];
+const ENV_KEYS = [
+  "PATH",
+  "JIRA_PAGER",
+  "PAGER",
+  "JIRA_API_TOKEN",
+  "JIRA_AXI_TIMEOUT_MS",
+  "NODE_OPTIONS",
+  "FAKE_JIRA_SLEEP",
+];
 const saved = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 let dir: string;
 
@@ -28,14 +47,25 @@ function parse(stdout: string): Record<string, string> {
   );
 }
 
-describe.skipIf(process.platform === "win32")("jira child process", () => {
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+describe("jira child process", () => {
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), "jira-axi-fake-"));
-    writeFileSync(join(dir, "jira"), FAKE_JIRA);
-    chmodSync(join(dir, "jira"), 0o755);
+    writeFileSync(join(dir, "fake.cjs"), FAKE_PRELOAD);
+    if (process.platform === "win32") copyFileSync(process.execPath, join(dir, "jira.exe"));
+    else symlinkSync(process.execPath, join(dir, "jira"));
   });
 
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  // Retries cover Windows keeping jira.exe locked briefly after the process exits.
+  afterAll(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10 }));
 
   afterEach(() => {
     for (const key of ENV_KEYS) {
@@ -46,7 +76,14 @@ describe.skipIf(process.platform === "win32")("jira child process", () => {
 
   function useFake(): void {
     process.env["PATH"] = `${dir}${delimiter}${saved["PATH"] ?? ""}`;
+    // NODE_OPTIONS splits on spaces and eats backslashes; quote and use forward slashes.
+    process.env["NODE_OPTIONS"] = `--require "${join(dir, "fake.cjs").replace(/\\/g, "/")}"`;
   }
+
+  it("reports JIRA_NOT_INSTALLED when jira is not on PATH", async () => {
+    process.env["PATH"] = join(dir, "missing");
+    await expect(jiraExec(["me"])).rejects.toMatchObject({ code: "JIRA_NOT_INSTALLED" });
+  });
 
   it("pins the pager to cat when no pager is inherited", async () => {
     useFake();
@@ -77,9 +114,13 @@ describe.skipIf(process.platform === "win32")("jira child process", () => {
     expect(env["STDIN"]).toBe("");
   });
 
-  it("terminates a hung child at the timeout", async () => {
+  it("terminates a hung child and its descendants at the timeout", async () => {
     useFake();
-    process.env["JIRA_AXI_TIMEOUT_MS"] = "200";
-    await expect(jiraExec(["sleep"])).rejects.toMatchObject({ code: "TIMEOUT" });
+    const pidFile = join(dir, "grandchild.pid");
+    process.env["FAKE_JIRA_SLEEP"] = pidFile;
+    process.env["JIRA_AXI_TIMEOUT_MS"] = "1000";
+    await expect(jiraExec(["me"])).rejects.toMatchObject({ code: "TIMEOUT" });
+    const pid = Number(readFileSync(pidFile, "utf8"));
+    await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 3000 });
   });
 });

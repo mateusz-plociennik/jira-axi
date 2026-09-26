@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { AxiError, jiraNotInstalledError, jiraTimeoutError, mapJiraError } from "./errors.js";
 
 /** Context resolved from global flags, appended to every child `jira` invocation. */
@@ -54,11 +54,15 @@ function killTree(child: ChildProcess): void {
   // Kill the whole process group when possible so a pager or editor spawned by
   // jira-cli cannot keep our stdio pipes — and therefore the Node event loop —
   // alive after the timeout has already been reported.
+  // Windows has no process groups; taskkill /T walks the child's process tree.
   try {
-    if (process.platform !== "win32" && typeof child.pid === "number") {
-      process.kill(-child.pid, "SIGKILL");
-    } else {
+    if (typeof child.pid !== "number") {
       child.kill("SIGKILL");
+    } else if (process.platform === "win32") {
+      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      child.kill("SIGKILL"); // in case taskkill is unavailable
+    } else {
+      process.kill(-child.pid, "SIGKILL");
     }
   } catch {
     child.kill("SIGKILL");

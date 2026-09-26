@@ -30,6 +30,23 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
+### Platform support
+
+CI runs install, build and tests (including the `jira` subprocess checks: executable discovery on `PATH`, stdin EOF, pager env, timeout kill of the process tree) on:
+
+| OS                     | Node   |
+| ---------------------- | ------ |
+| Linux (ubuntu-latest)  | 20, 24 |
+| macOS (macos-latest)   | 20     |
+| Windows (windows-latest) | 20   |
+
+Known platform differences:
+
+- Timeout kill: POSIX kills the child's process group; Windows runs `taskkill /T /F` on the child's process tree.
+- Pager: jira-cli never pages on Windows, so the `cat` pager pin only matters on POSIX.
+- Windows needs `jira.exe` on `PATH` (no shell is used, so `.cmd`/`.bat` shims are not found).
+- The subprocess checks use a fake `jira`; running against a real Jira server is validated manually, not in CI.
+
 ## Quick start
 
 ```sh
