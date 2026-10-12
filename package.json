@@ -22,7 +22,8 @@
     "dist",
     "skills/jira-axi",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"
@@ -33,7 +34,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke:pack": "bash scripts/smoke-pack.sh",
-    "prepublishOnly": "npm run build"
+    "prepare": "npm run build"
   },
   "license": "MIT",
   "engines": {

@@ -166,6 +166,14 @@ npm run test:watch  # watch mode
 npm run smoke:pack  # release check: pack, install tarball in a temp dir, run --version/--help
 ```
 
+## Releasing
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please) and follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+1. PRs are squash-merged and the **PR title** becomes the commit message, so it must be conventional (`fix: …`, `feat: …`, `feat!: …`); the `pr-title` check enforces this.
+2. Every push to `main` updates an open release PR that bumps `package.json` and `CHANGELOG.md`. While on `0.x`, `fix`/`feat` bump the patch version and breaking changes bump the minor version.
+3. Merging the release PR tags `vX.Y.Z`, creates a GitHub release, and publishes to npm from the `npm` environment via trusted publishing (OIDC, with provenance) — no npm token is stored.
+
 ## License
 
 MIT
