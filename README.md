@@ -30,7 +30,9 @@ jira-axi makes every one of those paths deterministic:
 - [`jira`](https://github.com/ankitpokhrel/jira-cli) installed and configured once with `jira init` (an interactive wizard — a human has to run it)
 - `JIRA_API_TOKEN` exported in the environment
 
-`release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{key}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this. Everything else works on both.
+`release list` currently needs Jira Cloud: as of jira-cli 1.7.0 it always requests `/rest/api/3/project/{projectIdOrKey}/versions`, which Jira Server/Data Center doesn't serve, so there it returns `NOT_FOUND`. Newer jira-cli versions may fix this.
+
+Tested with jira-cli 1.7.0 against Jira Server/Data Center, read-only commands only; all passed except `release list` (see above, [#16](https://github.com/mateusz-plociennik/jira-axi/issues/16)). Cloud and write commands haven't been verified against a real instance yet. See [docs/smoke-test.md](docs/smoke-test.md) for the checklist and results.
 
 ### Platform support
 
