@@ -45,9 +45,7 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+      - run: npm ci # runs `prepare` (build)
       - run: npm test
       - run: npm run smoke:pack
       - run: npm publish --provenance
